@@ -1,0 +1,22 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/resources/archetype-resources/**
+!**/src/test/resources/archetype-resources/**
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/resources/archetype-resources/**
+!**/src/test/resources/archetype-resources/**
+
+### VS Code ###
+.vscode/
+.history/
+*.log
+
+### OS ###
+.DS_Store
+Thumbs.db
