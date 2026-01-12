@@ -88,6 +88,9 @@ public class UserService {
         }
 
         for (Integer id : request.getUserIds()) {
+            if (id == null) {
+                continue;
+            }
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new BusinessException("用户不存在: " + id));
             user.setState("X");
