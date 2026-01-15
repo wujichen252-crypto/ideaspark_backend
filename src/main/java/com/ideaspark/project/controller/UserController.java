@@ -40,7 +40,7 @@ public class UserController {
     }
 
     /**
-     * 删除用户（逻辑删除）
+     * 删除用户
      */
     @PostMapping("/deleteUsers")
     public ResponseEntity<?> deleteUsers(@RequestBody UserDeleteRequest request) {

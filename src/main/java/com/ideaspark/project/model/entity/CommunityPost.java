@@ -3,6 +3,8 @@ package com.ideaspark.project.model.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -15,39 +17,51 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "users")
-public class User {
+@Table(name = "community_posts")
+public class CommunityPost {
 
     @Id
     @Column(name = "id", length = 36)
     private String id;
 
-    @Column(name = "username", nullable = false, length = 50)
-    private String username;
+    @ManyToOne
+    @JoinColumn(name = "author_id")
+    private User author;
 
-    @Column(name = "email", nullable = false, unique = true, length = 100)
-    private String email;
+    @ManyToOne
+    @JoinColumn(name = "project_id")
+    private Project project;
 
-    @Column(name = "password_hash", nullable = false, length = 255)
-    private String passwordHash;
+    @ManyToOne
+    @JoinColumn(name = "group_id")
+    private CommunityGroup group;
 
-    @Column(name = "avatar", length = 255)
-    private String avatar;
+    @Column(name = "title", length = 255)
+    private String title;
 
-    @Column(name = "role", length = 50)
-    private String role;
+    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
+    private String content;
 
-    @Column(name = "bio", columnDefinition = "TEXT")
-    private String bio;
+    @Column(name = "images", columnDefinition = "JSON")
+    private String images;
+
+    @Column(name = "tags", columnDefinition = "JSON")
+    private String tags;
+
+    @Column(name = "channel", length = 20)
+    private String channel;
+
+    @Column(name = "visibility", length = 20)
+    private String visibility;
 
     @Column(name = "likes_count")
     private Integer likesCount;
 
-    @Column(name = "followers_count")
-    private Integer followersCount;
+    @Column(name = "comments_count")
+    private Integer commentsCount;
 
-    @Column(name = "following_count")
-    private Integer followingCount;
+    @Column(name = "views_count")
+    private Integer viewsCount;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -55,40 +69,28 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "owner")
-    private List<Project> ownedProjects;
-
-    @OneToMany(mappedBy = "user")
-    private List<ProjectMember> projectMemberships;
-
-    @OneToMany(mappedBy = "user")
-    private List<ChatSession> chatSessions;
-
-    @OneToMany(mappedBy = "author")
-    private List<CommunityPost> communityPosts;
-
-    @OneToMany(mappedBy = "user")
+    @OneToMany(mappedBy = "post")
     private List<CommunityComment> comments;
 
     /**
-     * 初始化主键与审计字段的默认值
+     * 初始化主键与默认字段
      */
     @PrePersist
     public void prePersist() {
         if (this.id == null || this.id.isBlank()) {
             this.id = UUID.randomUUID().toString();
         }
-        if (this.role == null || this.role.isBlank()) {
-            this.role = "USER";
+        if (this.visibility == null || this.visibility.isBlank()) {
+            this.visibility = "public";
         }
         if (this.likesCount == null) {
             this.likesCount = 0;
         }
-        if (this.followersCount == null) {
-            this.followersCount = 0;
+        if (this.commentsCount == null) {
+            this.commentsCount = 0;
         }
-        if (this.followingCount == null) {
-            this.followingCount = 0;
+        if (this.viewsCount == null) {
+            this.viewsCount = 0;
         }
         if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
@@ -106,4 +108,3 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
 }
-
