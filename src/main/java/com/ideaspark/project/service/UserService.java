@@ -14,7 +14,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 @Service
 @RequiredArgsConstructor
@@ -30,23 +32,24 @@ public class UserService {
         if (request == null) {
             throw new BusinessException("请求参数不能为空");
         }
-        if (isBlank(request.getAccount())) {
-            throw new BusinessException("账号不能为空");
-        }
         if (isBlank(request.getUsername())) {
             throw new BusinessException("用户名不能为空");
         }
-        if (userRepository.existsByAccount(request.getAccount())) {
-            throw new BusinessException("账号已存在");
+        if (isBlank(request.getEmail())) {
+            throw new BusinessException("邮箱不能为空");
+        }
+        if (isBlank(request.getPassword())) {
+            throw new BusinessException("密码不能为空");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException("邮箱已存在");
         }
 
         User user = new User();
-        user.setAccount(request.getAccount());
         user.setUsername(request.getUsername());
-        user.setPhone(request.getPhone());
-        user.setRole("ADMIN");
-        user.setState("N");
-        user.setCreateTime(LocalDateTime.now());
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(sha256Hex(request.getPassword()));
+        user.setRole("USER");
 
         User saved = userRepository.save(user);
         return toUserResponse(saved);
@@ -79,7 +82,7 @@ public class UserService {
     }
 
     /**
-     * 逻辑删除用户（将 state 置为 X）
+     * 删除用户
      */
     @Transactional
     public void deleteUsers(UserDeleteRequest request) {
@@ -87,11 +90,14 @@ public class UserService {
             throw new BusinessException("用户 ID 列表不能为空");
         }
 
-        for (Integer id : request.getUserIds()) {
-            User user = userRepository.findById(id)
-                    .orElseThrow(() -> new BusinessException("用户不存在: " + id));
-            user.setState("X");
-            userRepository.save(user);
+        for (String id : request.getUserIds()) {
+            if (id == null) {
+                continue;
+            }
+            if (!userRepository.existsById(id)) {
+                throw new BusinessException("用户不存在: " + id);
+            }
+            userRepository.deleteById(id);
         }
     }
 
@@ -101,12 +107,12 @@ public class UserService {
     private UserResponse toUserResponse(User user) {
         UserResponse dto = new UserResponse();
         dto.setId(user.getId());
-        dto.setAccount(user.getAccount());
         dto.setUsername(user.getUsername());
-        dto.setPhone(user.getPhone());
-        dto.setCreateTime(user.getCreateTime());
+        dto.setEmail(user.getEmail());
+        dto.setAvatar(user.getAvatar());
+        dto.setCreatedAt(user.getCreatedAt());
+        dto.setUpdatedAt(user.getUpdatedAt());
         dto.setRole(roleToCn(user.getRole()));
-        dto.setState(stateToCn(user.getState()));
         return dto;
     }
 
@@ -124,26 +130,27 @@ public class UserService {
     }
 
     /**
-     * 状态编码转中文
-     */
-    private String stateToCn(String state) {
-        if ("N".equalsIgnoreCase(state)) {
-            return "新建";
-        }
-        if ("A".equalsIgnoreCase(state)) {
-            return "已激活";
-        }
-        if ("X".equalsIgnoreCase(state)) {
-            return "已删除";
-        }
-        return state;
-    }
-
-    /**
      * 判断字符串是否为空白
      */
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    /**
+     * 使用 SHA-256 对明文进行不可逆摘要
+     */
+    private String sha256Hex(String plainText) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] bytes = digest.digest(plainText.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(bytes.length * 2);
+            for (byte b : bytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new BusinessException("密码处理失败");
+        }
     }
 }
 
