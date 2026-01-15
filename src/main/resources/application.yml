@@ -20,14 +20,14 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        format_sql: true
+        '[format_sql]': true
         jdbc:
-          time_zone: Asia/Shanghai
+          '[time_zone]': Asia/Shanghai
 
-jackson:
-  time-zone: Asia/Shanghai
-  serialization:
-    write-dates-as-timestamps: false
+  jackson:
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
 
 logging:
   level:
