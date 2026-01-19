@@ -40,6 +40,30 @@ public class User {
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "position", length = 255)
+    private String position;
+
+    @Column(name = "address", length = 255)
+    private String address;
+
+    @Column(name = "per_website", length = 100)
+    private String perWebsite;
+
+    @Column(name = "phone", length = 50)
+    private String phone;
+
+    @Column(name = "is_hide", nullable = false)
+    private Boolean isHide;
+
+    @Column(name = "is_notifisys", nullable = false)
+    private Boolean isNotifSys;
+
+    @Column(name = "is_notiftrends", nullable = false)
+    private Boolean isNotifTrends;
+
+    @Column(name = "is_notifipost", nullable = false)
+    private Boolean isNotifPost;
+
     @Column(name = "likes_count")
     private Integer likesCount;
 
@@ -95,6 +119,18 @@ public class User {
         }
         if (this.updatedAt == null) {
             this.updatedAt = LocalDateTime.now();
+        }
+        if (this.isHide == null) {
+            this.isHide = false;
+        }
+        if (this.isNotifSys == null) {
+            this.isNotifSys = false;
+        }
+        if (this.isNotifTrends == null) {
+            this.isNotifTrends = false;
+        }
+        if (this.isNotifPost == null) {
+            this.isNotifPost = false;
         }
     }
 
