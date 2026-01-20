@@ -1,6 +1,6 @@
 CREATE TABLE chat_sessions (
     id VARCHAR(36) PRIMARY KEY COMMENT '会话ID',
-    user_id VARCHAR(36) COMMENT '创建用户ID',
+    user_id BIGINT COMMENT '创建用户ID',
     project_id VARCHAR(36) COMMENT '关联项目ID(可选)',
     title VARCHAR(100) COMMENT '会话标题',
     model VARCHAR(50) COMMENT '使用的AI模型',

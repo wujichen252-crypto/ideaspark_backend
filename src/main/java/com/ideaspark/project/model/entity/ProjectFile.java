@@ -47,11 +47,11 @@ public class ProjectFile {
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "created_by", length = 36)
-    private String createdBy;
+    @Column(name = "created_by")
+    private Long createdBy;
 
-    @Column(name = "updated_by", length = 36)
-    private String updatedBy;
+    @Column(name = "updated_by")
+    private Long updatedBy;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

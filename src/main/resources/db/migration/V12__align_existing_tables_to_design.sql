@@ -32,10 +32,10 @@ ALTER TABLE project_files
     ADD COLUMN plugin_id VARCHAR(36) NULL;
 
 ALTER TABLE project_files
-    ADD COLUMN created_by VARCHAR(36) NULL;
+    ADD COLUMN created_by BIGINT NULL;
 
 ALTER TABLE project_files
-    ADD COLUMN updated_by VARCHAR(36) NULL;
+    ADD COLUMN updated_by BIGINT NULL;
 
 ALTER TABLE project_files
     DROP COLUMN file_url;
@@ -59,7 +59,7 @@ ALTER TABLE project_checklists
     ADD COLUMN description TEXT;
 
 ALTER TABLE project_checklists
-    ADD COLUMN assignee_user_id VARCHAR(36) NULL;
+    ADD COLUMN assignee_user_id BIGINT NULL;
 
 ALTER TABLE project_checklists
     ADD COLUMN tags JSON;

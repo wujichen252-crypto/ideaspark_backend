@@ -1,6 +1,6 @@
 CREATE TABLE projects (
     id VARCHAR(36) PRIMARY KEY COMMENT '项目唯一标识',
-    owner_id VARCHAR(36) COMMENT '项目所有者ID',
+    owner_id BIGINT COMMENT '项目所有者ID',
     name VARCHAR(100) NOT NULL COMMENT '项目名称',
     description TEXT COMMENT '项目简述',
     detailed_description TEXT COMMENT '详细描述',

@@ -44,8 +44,8 @@ public class ProjectChecklist {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "assignee_user_id", length = 36)
-    private String assigneeUserId;
+    @Column(name = "assignee_user_id")
+    private Long assigneeUserId;
 
     @Column(name = "tags", columnDefinition = "JSON")
     private String tags;

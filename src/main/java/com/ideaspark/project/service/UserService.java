@@ -3,10 +3,13 @@ package com.ideaspark.project.service;
 import com.ideaspark.project.exception.BusinessException;
 import com.ideaspark.project.model.dto.request.UserCreateRequest;
 import com.ideaspark.project.model.dto.request.UserDeleteRequest;
+import com.ideaspark.project.model.dto.request.UserLoginRequest;
 import com.ideaspark.project.model.dto.request.UserQueryRequest;
+import com.ideaspark.project.model.dto.response.LoginResponse;
 import com.ideaspark.project.model.dto.response.UserResponse;
 import com.ideaspark.project.model.entity.User;
 import com.ideaspark.project.repository.UserRepository;
+import com.ideaspark.project.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,6 +26,38 @@ import java.security.NoSuchAlgorithmException;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+
+    /**
+     * 用户登录
+     */
+    @Transactional
+    public LoginResponse login(UserLoginRequest request) {
+        if (request == null) {
+            throw new BusinessException("请求参数不能为空");
+        }
+        if (isBlank(request.getEmail())) {
+            throw new BusinessException("邮箱不能为空");
+        }
+        if (isBlank(request.getPassword())) {
+            throw new BusinessException("密码不能为空");
+        }
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BusinessException("邮箱或密码错误"));
+
+        if (!user.getPasswordHash().equals(sha256Hex(request.getPassword()))) {
+            throw new BusinessException("邮箱或密码错误");
+        }
+
+        // Generate token using User ID as account/subject
+        String token = jwtUtil.generateToken(String.valueOf(user.getId()), user.getRole());
+
+        LoginResponse response = new LoginResponse();
+        response.setToken(token);
+        response.setUserInfo(toUserResponse(user));
+        return response;
+    }
 
     /**
      * 注册用户
@@ -90,7 +125,7 @@ public class UserService {
             throw new BusinessException("用户 ID 列表不能为空");
         }
 
-        for (String id : request.getUserIds()) {
+        for (Long id : request.getUserIds()) {
             if (id == null) {
                 continue;
             }

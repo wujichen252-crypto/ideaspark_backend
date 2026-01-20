@@ -7,6 +7,6 @@ import java.util.List;
 @Data
 public class UserDeleteRequest {
 
-    private List<String> userIds;
+    private List<Long> userIds;
 }
 

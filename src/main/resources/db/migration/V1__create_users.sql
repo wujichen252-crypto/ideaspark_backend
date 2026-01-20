@@ -1,11 +1,19 @@
 CREATE TABLE users (
-    id VARCHAR(36) PRIMARY KEY COMMENT '用户唯一标识',
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用户唯一标识',
     username VARCHAR(50) NOT NULL COMMENT '用户昵称',
     email VARCHAR(100) NOT NULL UNIQUE COMMENT '登录邮箱',
     password_hash VARCHAR(255) NOT NULL COMMENT '加密密码',
     avatar VARCHAR(255) COMMENT '头像URL',
     role VARCHAR(50) DEFAULT 'USER' COMMENT '角色：USER/ADMIN',
     bio TEXT COMMENT '个人简介',
+    position VARCHAR(255) COMMENT '用户职位',
+    address VARCHAR(255) COMMENT '所在地区',
+    per_website VARCHAR(100) COMMENT '个人网站',
+    phone VARCHAR(50) COMMENT '绑定手机号',
+    is_hide TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否隐藏',
+    is_notifisys TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否接收系统通知',
+    is_notiftrends TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否接收项目动态',
+    is_notifipost TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否接收产品推荐和活动资讯',
     likes_count INT DEFAULT 0 COMMENT '获赞总数',
     followers_count INT DEFAULT 0 COMMENT '粉丝数',
     following_count INT DEFAULT 0 COMMENT '关注数',
@@ -13,4 +21,3 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) COMMENT '用户信息表';
-

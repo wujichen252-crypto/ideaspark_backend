@@ -3,9 +3,7 @@ package com.ideaspark.project.model.dto.request;
 import lombok.Data;
 
 @Data
-public class UserCreateRequest {
-    private String username;
+public class UserLoginRequest {
     private String email;
     private String password;
 }
-

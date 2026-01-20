@@ -2,10 +2,10 @@ package com.ideaspark.project.controller;
 
 import com.ideaspark.project.model.dto.request.UserCreateRequest;
 import com.ideaspark.project.model.dto.request.UserDeleteRequest;
+import com.ideaspark.project.model.dto.request.UserLoginRequest;
 import com.ideaspark.project.model.dto.request.UserQueryRequest;
 import com.ideaspark.project.service.UserService;
 import com.ideaspark.project.util.ResponseUtil;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,10 +17,21 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/user")
-@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    /**
+     * 用户登录
+     */
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody UserLoginRequest request) {
+        return ResponseUtil.ok("登录成功", userService.login(request));
+    }
 
     /**
      * 用户注册

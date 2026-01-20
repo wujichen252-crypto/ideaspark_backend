@@ -1,6 +1,6 @@
 CREATE TABLE community_posts (
     id VARCHAR(36) PRIMARY KEY COMMENT '帖子ID',
-    author_id VARCHAR(36) COMMENT '发布者ID',
+    author_id BIGINT COMMENT '发布者ID',
     project_id VARCHAR(36) COMMENT '关联项目ID(可选)',
     title VARCHAR(255) NOT NULL COMMENT '标题',
     content TEXT NOT NULL COMMENT '内容(支持Markdown)',

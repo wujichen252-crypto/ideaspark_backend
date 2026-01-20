@@ -1,6 +1,6 @@
 CREATE TABLE teams (
     id VARCHAR(36) PRIMARY KEY COMMENT '团队唯一标识',
-    owner_id VARCHAR(36) NOT NULL COMMENT '团队所有者',
+    owner_id BIGINT NOT NULL COMMENT '团队所有者',
     name VARCHAR(100) NOT NULL COMMENT '团队名称',
     is_personal BOOLEAN DEFAULT FALSE COMMENT '是否个人空间',
     avatar_url VARCHAR(255) COMMENT '团队头像',
@@ -17,7 +17,7 @@ CREATE INDEX idx_teams_owner_id ON teams(owner_id);
 CREATE TABLE team_members (
     id VARCHAR(36) PRIMARY KEY COMMENT '记录唯一标识',
     team_id VARCHAR(36) NOT NULL COMMENT '团队 ID',
-    user_id VARCHAR(36) NOT NULL COMMENT '用户 ID',
+    user_id BIGINT NOT NULL COMMENT '用户 ID',
     role VARCHAR(20) NOT NULL COMMENT '角色 (owner, admin, member, visitor)',
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
     CONSTRAINT fk_team_members_team_id FOREIGN KEY (team_id) REFERENCES teams(id),
@@ -73,7 +73,7 @@ CREATE TABLE community_groups (
     icon_url VARCHAR(255) COMMENT '图标 URL',
     cover_url VARCHAR(255) COMMENT '封面 URL',
     description TEXT COMMENT '圈子描述',
-    created_by VARCHAR(36) NULL COMMENT '创建者',
+    created_by BIGINT NULL COMMENT '创建者',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     CONSTRAINT fk_community_groups_created_by FOREIGN KEY (created_by) REFERENCES users(id)
@@ -84,7 +84,7 @@ CREATE INDEX idx_community_groups_created_by ON community_groups(created_by);
 CREATE TABLE community_group_members (
     id VARCHAR(36) PRIMARY KEY COMMENT '记录唯一标识',
     group_id VARCHAR(36) NOT NULL COMMENT '圈子 ID',
-    user_id VARCHAR(36) NOT NULL COMMENT '用户 ID',
+    user_id BIGINT NOT NULL COMMENT '用户 ID',
     role VARCHAR(20) DEFAULT 'member' COMMENT '圈子角色',
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '加入时间',
     CONSTRAINT fk_community_group_members_group_id FOREIGN KEY (group_id) REFERENCES community_groups(id),
@@ -97,8 +97,8 @@ CREATE INDEX idx_community_group_members_user_id ON community_group_members(user
 
 CREATE TABLE user_follows (
     id VARCHAR(36) PRIMARY KEY COMMENT '关注记录唯一标识',
-    follower_id VARCHAR(36) NOT NULL COMMENT '关注者用户 ID',
-    following_id VARCHAR(36) NOT NULL COMMENT '被关注者用户 ID',
+    follower_id BIGINT NOT NULL COMMENT '关注者用户 ID',
+    following_id BIGINT NOT NULL COMMENT '被关注者用户 ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '关注时间',
     CONSTRAINT fk_user_follows_follower_id FOREIGN KEY (follower_id) REFERENCES users(id),
     CONSTRAINT fk_user_follows_following_id FOREIGN KEY (following_id) REFERENCES users(id),
