@@ -101,6 +101,12 @@ public class JwtUtil {
             keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         }
 
+        // HS256 要求密钥至少 256 位（32 字节）
+        if (keyBytes.length < 32) {
+            int bits = keyBytes.length * 8;
+            throw new BusinessException(400, "jwt.secret 安全性不足（当前 " + bits + " 位），HS256 需至少 256 位。请将 jwt.secret 设置为 Base64 编码的 32 字节随机密钥。");
+        }
+
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
