@@ -3,12 +3,15 @@ package com.ideaspark.project.service;
 import com.aliyun.oss.OSS;
 import com.ideaspark.project.config.OssProperties;
 import com.ideaspark.project.exception.BusinessException;
+import com.ideaspark.project.model.dto.response.FileUploadResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -47,6 +50,39 @@ public class OssService {
         } catch (Exception e) {
             throw new BusinessException("OSS 上传失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 上传文件并返回详细信息
+     */
+    public FileUploadResponse uploadFile(MultipartFile file) {
+        // 1. 生成日期目录 (yyyy/MM/dd)
+        String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+
+        // 2. 上传文件
+        String key = upload(file, datePath);
+
+        // 3. 构建完整 URL
+        String endpoint = ossProperties.getEndpoint();
+        String bucket = ossProperties.getBucket();
+
+        // 处理 endpoint，去掉协议头用于拼接
+        String domain = endpoint.replace("https://", "").replace("http://", "");
+        String url = "https://" + bucket + "." + domain + "/" + key;
+
+        // 4. 获取文件信息
+        String originalFilename = file.getOriginalFilename();
+        String extension = "";
+        if (originalFilename != null && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1);
+        }
+
+        return FileUploadResponse.builder()
+                .url(url)
+                .path(key)
+                .fileName(originalFilename)
+                .fileExtension(extension)
+                .build();
     }
 
     /**

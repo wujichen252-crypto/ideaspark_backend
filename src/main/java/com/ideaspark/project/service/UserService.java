@@ -1,10 +1,11 @@
 package com.ideaspark.project.service;
 
 import com.ideaspark.project.exception.BusinessException;
-import com.ideaspark.project.model.dto.request.UserCreateRequest;
+import com.ideaspark.project.model.dto.request.UserRegisterRequest;
 import com.ideaspark.project.model.dto.request.UserDeleteRequest;
 import com.ideaspark.project.model.dto.request.UserLoginRequest;
 import com.ideaspark.project.model.dto.request.UserQueryRequest;
+import com.ideaspark.project.model.dto.request.UserRegisterRequest;
 import com.ideaspark.project.model.dto.request.UserUpdateRequest;
 import com.ideaspark.project.model.dto.response.LoginResponse;
 import com.ideaspark.project.model.dto.response.UserResponse;
@@ -64,7 +65,7 @@ public class UserService {
      * 注册用户
      */
     @Transactional
-    public UserResponse register(UserCreateRequest request) {
+    public UserResponse register(UserRegisterRequest request) {
         if (request == null) {
             throw new BusinessException("请求参数不能为空");
         }
