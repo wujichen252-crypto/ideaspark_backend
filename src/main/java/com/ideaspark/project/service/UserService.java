@@ -5,6 +5,7 @@ import com.ideaspark.project.model.dto.request.UserCreateRequest;
 import com.ideaspark.project.model.dto.request.UserDeleteRequest;
 import com.ideaspark.project.model.dto.request.UserLoginRequest;
 import com.ideaspark.project.model.dto.request.UserQueryRequest;
+import com.ideaspark.project.model.dto.request.UserUpdateRequest;
 import com.ideaspark.project.model.dto.response.LoginResponse;
 import com.ideaspark.project.model.dto.response.UserResponse;
 import com.ideaspark.project.model.entity.User;
@@ -137,6 +138,68 @@ public class UserService {
     }
 
     /**
+     * 更新用户信息
+     */
+    @Transactional
+    public UserResponse updateUser(Long userId, UserUpdateRequest request) {
+        if (userId == null) {
+            throw new BusinessException("用户 ID 不能为空");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("用户不存在: " + userId));
+
+        if (request.getAvatar() != null) {
+            user.setAvatar(request.getAvatar());
+        }
+        if (request.getUsername() != null && !request.getUsername().trim().isEmpty()) {
+            user.setUsername(request.getUsername());
+        }
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            if (!user.getEmail().equals(request.getEmail())) {
+                if (userRepository.existsByEmail(request.getEmail())) {
+                    throw new BusinessException("邮箱已存在");
+                }
+                user.setEmail(request.getEmail());
+            }
+        }
+        if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
+            user.setPasswordHash(sha256Hex(request.getPassword()));
+        }
+        if (request.getPosition() != null) {
+            user.setPosition(request.getPosition());
+        }
+        if (request.getBio() != null) {
+            user.setBio(request.getBio());
+        }
+        if (request.getAddress() != null) {
+            user.setAddress(request.getAddress());
+        }
+        if (request.getPerWebsite() != null) {
+            user.setPerWebsite(request.getPerWebsite());
+        }
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+        if (request.getIsHide() != null) {
+            user.setIsHide(request.getIsHide());
+        }
+        if (request.getIsNotifSys() != null) {
+            user.setIsNotifSys(request.getIsNotifSys());
+        }
+        if (request.getIsNotifTrends() != null) {
+            user.setIsNotifTrends(request.getIsNotifTrends());
+        }
+        if (request.getIsNotifPost() != null) {
+            user.setIsNotifPost(request.getIsNotifPost());
+        }
+
+        User saved = userRepository.save(user);
+        return toUserResponse(saved);
+    }
+
+
+    /**
      * Entity 转 Response DTO（手动映射）
      */
     private UserResponse toUserResponse(User user) {
@@ -148,6 +211,15 @@ public class UserService {
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
         dto.setRole(roleToCn(user.getRole()));
+        dto.setIsHide(user.getIsHide());
+        dto.setIsNotifSys(user.getIsNotifSys());
+        dto.setIsNotifTrends(user.getIsNotifTrends());
+        dto.setIsNotifPost(user.getIsNotifPost());
+        dto.setBio(user.getBio());
+        dto.setPosition(user.getPosition());
+        dto.setAddress(user.getAddress());
+        dto.setPerWebsite(user.getPerWebsite());
+        dto.setPhone(user.getPhone());
         return dto;
     }
 

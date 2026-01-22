@@ -18,5 +18,16 @@ public class UserResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String role;
+
+    private Boolean isHide;
+    private Boolean isNotifSys;
+    private Boolean isNotifTrends;
+    private Boolean isNotifPost;
+
+    private String bio;
+    private String position;
+    private String address;
+    private String perWebsite;
+    private String phone;
 }
 

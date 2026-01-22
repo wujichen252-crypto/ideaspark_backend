@@ -54,16 +54,16 @@ public class User {
     private String phone;
 
     @Column(name = "is_hide", nullable = false)
-    private Boolean isHide;
+    private Boolean isHide = true;
 
     @Column(name = "is_notifisys", nullable = false)
-    private Boolean isNotifSys;
+    private Boolean isNotifSys = true;
 
     @Column(name = "is_notiftrends", nullable = false)
-    private Boolean isNotifTrends;
+    private Boolean isNotifTrends = true;
 
     @Column(name = "is_notifipost", nullable = false)
-    private Boolean isNotifPost;
+    private Boolean isNotifPost = false;
 
     @Column(name = "likes_count")
     private Integer likesCount;

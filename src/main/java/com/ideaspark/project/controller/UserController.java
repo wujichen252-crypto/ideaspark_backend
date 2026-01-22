@@ -4,8 +4,10 @@ import com.ideaspark.project.model.dto.request.UserCreateRequest;
 import com.ideaspark.project.model.dto.request.UserDeleteRequest;
 import com.ideaspark.project.model.dto.request.UserLoginRequest;
 import com.ideaspark.project.model.dto.request.UserQueryRequest;
+import com.ideaspark.project.model.dto.request.UserUpdateRequest;
 import com.ideaspark.project.service.UserService;
 import com.ideaspark.project.util.ResponseUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestAttribute;
 
 @RestController
 @RequestMapping("/api/user")
@@ -39,6 +42,14 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody UserCreateRequest request) {
         return ResponseUtil.ok("注册成功", userService.register(request));
+    }
+
+    /**
+     * 更新用户信息
+     */
+    @PostMapping("/update")
+    public ResponseEntity<?> update(@RequestAttribute("userId") Long userId, @RequestBody UserUpdateRequest request) {
+        return ResponseUtil.ok("更新成功", userService.updateUser(userId, request));
     }
 
     /**
