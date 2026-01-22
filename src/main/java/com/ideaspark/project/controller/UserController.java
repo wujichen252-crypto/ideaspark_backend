@@ -1,47 +1,47 @@
 package com.ideaspark.project.controller;
 
-import com.ideaspark.project.model.dto.request.UserCreateRequest;
+import com.ideaspark.project.model.dto.request.UserRegisterRequest;
 import com.ideaspark.project.model.dto.request.UserDeleteRequest;
 import com.ideaspark.project.model.dto.request.UserLoginRequest;
 import com.ideaspark.project.model.dto.request.UserQueryRequest;
 import com.ideaspark.project.model.dto.request.UserUpdateRequest;
 import com.ideaspark.project.service.UserService;
-import com.ideaspark.project.util.ResponseUtil;
-import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
+@RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
-
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
 
     /**
      * 用户登录
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody UserLoginRequest request) {
-        return ResponseUtil.ok("登录成功", userService.login(request));
+        return ResponseEntity.ok(Map.of(
+            "status", 200,
+            "message", "登录成功",
+            "data", userService.login(request)
+        ));
     }
 
     /**
      * 用户注册
      */
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody UserCreateRequest request) {
-        return ResponseUtil.ok("注册成功", userService.register(request));
+    public ResponseEntity<?> register(@RequestBody UserRegisterRequest request) {
+        return ResponseEntity.ok(Map.of(
+            "status", 200,
+            "message", "注册成功",
+            "data", userService.register(request)
+        ));
     }
 
     /**
@@ -49,7 +49,11 @@ public class UserController {
      */
     @PostMapping("/update")
     public ResponseEntity<?> update(@RequestAttribute("userId") Long userId, @RequestBody UserUpdateRequest request) {
-        return ResponseUtil.ok("更新成功", userService.updateUser(userId, request));
+        return ResponseEntity.ok(Map.of(
+            "status", 200,
+            "message", "更新成功",
+            "data", userService.updateUser(userId, request)
+        ));
     }
 
     /**
@@ -58,7 +62,11 @@ public class UserController {
     @GetMapping("/getAllUsers")
     public ResponseEntity<?> getAllUsers(@ModelAttribute UserQueryRequest request) {
         Page<?> page = userService.queryUsers(request);
-        return ResponseUtil.ok("查询成功", page);
+        return ResponseEntity.ok(Map.of(
+            "status", 200,
+            "message", "查询成功",
+            "data", page
+        ));
     }
 
     /**
@@ -67,7 +75,10 @@ public class UserController {
     @PostMapping("/deleteUsers")
     public ResponseEntity<?> deleteUsers(@RequestBody UserDeleteRequest request) {
         userService.deleteUsers(request);
-        return ResponseUtil.ok("删除成功");
+        return ResponseEntity.ok(Map.of(
+            "status", 200,
+            "message", "删除成功"
+        ));
     }
 }
 
