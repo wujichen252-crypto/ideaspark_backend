@@ -19,8 +19,8 @@ import java.util.UUID;
 public class Team {
 
     @Id
-    @Column(name = "id", length = 36)
-    private String id;
+    @Column(name = "uuiu", length = 36)
+    private String uuid;
 
     @ManyToOne
     @JoinColumn(name = "owner_id")
@@ -38,6 +38,9 @@ public class Team {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "team_size")
+    private Integer teamSize;
+
     @Column(name = "dissolved_at")
     private LocalDateTime dissolvedAt;
 
@@ -52,11 +55,15 @@ public class Team {
      */
     @PrePersist
     public void prePersist() {
-        if (this.id == null || this.id.isBlank()) {
-            this.id = UUID.randomUUID().toString();
+        if (this.uuid == null || this.uuid.isBlank()) {
+            int value = (int) (Math.random() * 1_000_000);
+            this.uuid = String.format("%06d", value);
         }
         if (this.isPersonal == null) {
             this.isPersonal = false;
+        }
+        if (this.teamSize == null) {
+            this.teamSize = 0;
         }
         if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
