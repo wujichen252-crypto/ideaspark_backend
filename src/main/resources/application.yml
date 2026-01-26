@@ -1,0 +1,60 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ideaspark
+  flyway:
+    enabled: false
+    clean-disabled: true
+    validate-on-migrate: false
+  datasource:
+    url: jdbc:mysql://62.234.128.72:3306/ideaspark?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ideaspark
+    password: icG62wSHYaaPKGX6
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        '[format_sql]': true
+        jdbc:
+          '[time_zone]': Asia/Shanghai
+
+  jackson:
+    time-zone: Asia/Shanghai
+    serialization:
+      write-dates-as-timestamps: false
+
+logging:
+  level:
+    root: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
+jwt:
+  secret: ideaspark_secret_key_default_for_dev_123456
+  expire-seconds: 3600
+  issuer: ideaspark
+
+oss:
+  enabled: true
+  endpoint: https://oss-cn-beijing.aliyuncs.com
+  access-key-id: ${OSS_ACCESS_KEY_ID}
+  access-key-secret: ${OSS_ACCESS_KEY_SECRET}
+  bucket: ideaspark
+  base-dir: uploads
+
