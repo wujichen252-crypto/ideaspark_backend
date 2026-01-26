@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Data
 public class TeamMemberListItemResponse {
 
-    private String id;
+    private Long id;
 
     private Long userId;
 

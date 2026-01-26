@@ -3,20 +3,32 @@ package com.ideaspark.project.service;
 import com.ideaspark.project.exception.BusinessException;
 import com.ideaspark.project.model.dto.request.TeamCreateCollaborationRequest;
 import com.ideaspark.project.model.dto.request.TeamDissolveRequest;
+import com.ideaspark.project.model.dto.request.TeamInvitationInviteeRequest;
+import com.ideaspark.project.model.dto.request.TeamInvitationSendRequest;
 import com.ideaspark.project.model.dto.request.TeamMemberListRequest;
+import com.ideaspark.project.model.dto.request.TeamMemberRoleUpdateRequest;
 import com.ideaspark.project.model.dto.request.TeamMyListRequest;
+import com.ideaspark.project.model.dto.request.TeamTransferOwnershipRequest;
 import com.ideaspark.project.model.dto.request.TeamUpdateRequest;
 import com.ideaspark.project.model.dto.response.TeamCreateCollaborationResponse;
 import com.ideaspark.project.model.dto.response.TeamDetailResponse;
 import com.ideaspark.project.model.dto.response.TeamDissolveResponse;
+import com.ideaspark.project.model.dto.response.TeamInvitationItemResponse;
+import com.ideaspark.project.model.dto.response.TeamInvitationSendResponse;
 import com.ideaspark.project.model.dto.response.TeamListItemResponse;
 import com.ideaspark.project.model.dto.response.TeamMemberListItemResponse;
+import com.ideaspark.project.model.dto.response.TeamMemberRoleUpdateResponse;
+import com.ideaspark.project.model.dto.response.TeamMemberRemoveResponse;
+import com.ideaspark.project.model.dto.response.TeamExitResponse;
+import com.ideaspark.project.model.dto.response.TeamTransferOwnershipResponse;
 import com.ideaspark.project.model.dto.response.TeamUpdateResponse;
 import com.ideaspark.project.model.entity.Project;
 import com.ideaspark.project.model.entity.Team;
+import com.ideaspark.project.model.entity.TeamInvitation;
 import com.ideaspark.project.model.entity.TeamMember;
 import com.ideaspark.project.model.entity.User;
 import com.ideaspark.project.repository.ProjectRepository;
+import com.ideaspark.project.repository.TeamInvitationRepository;
 import com.ideaspark.project.repository.TeamMemberRepository;
 import com.ideaspark.project.repository.TeamRepository;
 import com.ideaspark.project.repository.UserRepository;
@@ -29,8 +41,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,6 +58,8 @@ public class TeamService {
     private final ProjectRepository projectRepository;
 
     private final UserRepository userRepository;
+
+    private final TeamInvitationRepository teamInvitationRepository;
 
     @Transactional
     public TeamCreateCollaborationResponse createCollaborationTeam(Long userId, TeamCreateCollaborationRequest request) {
@@ -257,6 +273,291 @@ public class TeamService {
         return new PageImpl<>(items, pageable, memberPage.getTotalElements());
     }
 
+    @Transactional
+    public TeamMemberRoleUpdateResponse updateMemberRole(String teamUuid, String memberId, Long userId, TeamMemberRoleUpdateRequest request) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        if (teamUuid == null || teamUuid.trim().isEmpty()) {
+            throw new BusinessException("团队UUID不能为空");
+        }
+        if (memberId == null || memberId.trim().isEmpty()) {
+            throw new BusinessException("成员ID不能为空");
+        }
+        if (request == null || request.getRole() == null || request.getRole().trim().isEmpty()) {
+            throw new BusinessException("角色不能为空");
+        }
+        Team team = teamRepository.findById(teamUuid)
+                .orElseThrow(() -> new BusinessException("团队不存在"));
+        Optional<TeamMember> membershipOpt = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, userId);
+        TeamMember currentMembership = membershipOpt.orElseThrow(() -> new BusinessException("无权访问该团队"));
+        TeamMember targetMember = teamMemberRepository.findById(Long.valueOf(memberId))
+                .orElseThrow(() -> new BusinessException("成员不存在"));
+        if (targetMember.getTeam() == null || !teamUuid.equals(targetMember.getTeam().getUuid())) {
+            throw new BusinessException("成员不属于当前团队");
+        }
+        String currentRole = currentMembership.getRole();
+        if (!canChangeMemberRole(currentRole, targetMember, userId)) {
+            throw new BusinessException("无权限修改该成员角色");
+        }
+        String newRole = request.getRole().trim().toLowerCase();
+        if ("owner".equalsIgnoreCase(newRole)) {
+            throw new BusinessException("不能将角色修改为所有者");
+        }
+        if (!"admin".equalsIgnoreCase(newRole)
+                && !"member".equalsIgnoreCase(newRole)
+                && !"visitor".equalsIgnoreCase(newRole)) {
+            throw new BusinessException("角色不合法");
+        }
+        String oldRole = targetMember.getRole();
+        targetMember.setRole(newRole);
+        teamMemberRepository.save(targetMember);
+        TeamMemberRoleUpdateResponse response = new TeamMemberRoleUpdateResponse();
+        response.setMemberId(targetMember.getId());
+        User user = targetMember.getUser();
+        if (user != null) {
+            response.setUserId(user.getId());
+            response.setUserName(user.getUsername());
+        }
+        response.setOldRole(oldRole);
+        response.setNewRole(newRole);
+        return response;
+    }
+
+    @Transactional
+    public TeamMemberRemoveResponse removeMember(String teamUuid, String memberId, Long userId) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        if (teamUuid == null || teamUuid.trim().isEmpty()) {
+            throw new BusinessException("团队UUID不能为空");
+        }
+        if (memberId == null || memberId.trim().isEmpty()) {
+            throw new BusinessException("成员ID不能为空");
+        }
+        Team team = teamRepository.findById(teamUuid)
+                .orElseThrow(() -> new BusinessException("团队不存在"));
+        Optional<TeamMember> membershipOpt = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, userId);
+        TeamMember currentMembership = membershipOpt.orElseThrow(() -> new BusinessException("无权访问该团队"));
+        TeamMember targetMember = teamMemberRepository.findById(Long.valueOf(memberId))
+                .orElseThrow(() -> new BusinessException("成员不存在"));
+        if (targetMember.getTeam() == null || !teamUuid.equals(targetMember.getTeam().getUuid())) {
+            throw new BusinessException("成员不属于当前团队");
+        }
+        String currentRole = currentMembership.getRole();
+        if (!canRemoveMember(currentRole, targetMember, userId)) {
+            throw new BusinessException("无权限移除该成员");
+        }
+        User targetUser = targetMember.getUser();
+        TeamMemberRemoveResponse response = new TeamMemberRemoveResponse();
+        response.setMemberId(targetMember.getId());
+        if (targetUser != null) {
+            response.setUserId(targetUser.getId());
+            response.setUserName(targetUser.getUsername());
+        }
+        teamMemberRepository.delete(targetMember);
+        return response;
+    }
+
+    @Transactional
+    public TeamExitResponse exitTeam(String teamUuid, Long userId) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        if (teamUuid == null || teamUuid.trim().isEmpty()) {
+            throw new BusinessException("团队UUID不能为空");
+        }
+        Team team = teamRepository.findById(teamUuid)
+                .orElseThrow(() -> new BusinessException("团队不存在"));
+        Optional<TeamMember> membershipOpt = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, userId);
+        TeamMember membership = membershipOpt.orElseThrow(() -> new BusinessException("无权访问该团队"));
+        String role = membership.getRole();
+        if (role == null) {
+            throw new BusinessException("无权限退出团队");
+        }
+        if ("owner".equalsIgnoreCase(role)) {
+            if (Boolean.TRUE.equals(team.getIsPersonal())) {
+                throw new BusinessException("个人团队不能退出");
+            }
+            throw new BusinessException("团队所有者不能退出团队");
+        }
+        if (!"admin".equalsIgnoreCase(role) && !"member".equalsIgnoreCase(role)) {
+            throw new BusinessException("无权限退出团队");
+        }
+        User user = membership.getUser();
+        teamMemberRepository.delete(membership);
+        TeamExitResponse response = new TeamExitResponse();
+        response.setTeamId(team.getUuid());
+        response.setTeamName(team.getName());
+        if (user != null) {
+            response.setUserId(user.getId());
+            response.setUserName(user.getUsername());
+        }
+        return response;
+    }
+
+    @Transactional
+    public TeamTransferOwnershipResponse transferOwnership(String teamUuid, Long userId, TeamTransferOwnershipRequest request) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        if (teamUuid == null || teamUuid.trim().isEmpty()) {
+            throw new BusinessException("团队UUID不能为空");
+        }
+        if (request == null || request.getNewOwnerMemberId() == null || request.getNewOwnerMemberId().trim().isEmpty()) {
+            throw new BusinessException("新所有者成员ID不能为空");
+        }
+        Team team = teamRepository.findById(teamUuid)
+                .orElseThrow(() -> new BusinessException("团队不存在"));
+        if (Boolean.TRUE.equals(team.getIsPersonal())) {
+            throw new BusinessException("个人团队不支持转让所有权");
+        }
+        Optional<TeamMember> membershipOpt = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, userId);
+        TeamMember currentMembership = membershipOpt.orElseThrow(() -> new BusinessException("无权访问该团队"));
+        String currentRole = currentMembership.getRole();
+        if (currentRole == null || !"owner".equalsIgnoreCase(currentRole)) {
+            throw new BusinessException("仅团队所有者可以转让所有权");
+        }
+        User oldOwner = currentMembership.getUser();
+        if (oldOwner == null || team.getOwner() == null || !userId.equals(team.getOwner().getId())) {
+            throw new BusinessException("仅当前团队所有者可以转让所有权");
+        }
+        Long newOwnerMemberId;
+        try {
+            newOwnerMemberId = Long.valueOf(request.getNewOwnerMemberId());
+        } catch (NumberFormatException e) {
+            throw new BusinessException("新所有者成员ID不合法");
+        }
+        TeamMember targetMember = teamMemberRepository.findById(newOwnerMemberId)
+                .orElseThrow(() -> new BusinessException("目标成员不存在"));
+        if (targetMember.getTeam() == null || !teamUuid.equals(targetMember.getTeam().getUuid())) {
+            throw new BusinessException("目标成员不属于当前团队");
+        }
+        if (targetMember.getUser() == null) {
+            throw new BusinessException("目标成员用户信息异常");
+        }
+        String targetRole = targetMember.getRole();
+        if (targetRole == null || !"admin".equalsIgnoreCase(targetRole)) {
+            throw new BusinessException("仅可将所有者转让给管理员");
+        }
+        User newOwner = targetMember.getUser();
+        team.setOwner(newOwner);
+        currentMembership.setRole("admin");
+        targetMember.setRole("owner");
+        teamRepository.save(team);
+        teamMemberRepository.save(currentMembership);
+        teamMemberRepository.save(targetMember);
+        TeamTransferOwnershipResponse response = new TeamTransferOwnershipResponse();
+        response.setTeamId(team.getUuid());
+        response.setOldOwnerId(oldOwner.getId());
+        response.setNewOwnerId(newOwner.getId());
+        return response;
+    }
+
+    @Transactional
+    public TeamInvitationSendResponse sendInvitations(String teamUuid, Long userId, TeamInvitationSendRequest request) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        if (teamUuid == null || teamUuid.trim().isEmpty()) {
+            throw new BusinessException("团队UUID不能为空");
+        }
+        if (request == null || request.getInvitees() == null || request.getInvitees().isEmpty()) {
+            throw new BusinessException("邀请列表不能为空");
+        }
+        Team team = teamRepository.findById(teamUuid)
+                .orElseThrow(() -> new BusinessException("团队不存在"));
+        Optional<TeamMember> membershipOpt = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, userId);
+        TeamMember membership = membershipOpt.orElseThrow(() -> new BusinessException("无权访问该团队"));
+        String currentRole = membership.getRole();
+        if (currentRole == null || (!"owner".equalsIgnoreCase(currentRole) && !"admin".equalsIgnoreCase(currentRole))) {
+            throw new BusinessException("无权限发送团队邀请");
+        }
+        User inviter = membership.getUser();
+        int totalInvited = request.getInvitees().size();
+        int successCount = 0;
+        List<TeamInvitationItemResponse> invitationDtos = new ArrayList<>();
+        for (TeamInvitationInviteeRequest item : request.getInvitees()) {
+            if (item == null) {
+                continue;
+            }
+            String role = item.getRole();
+            if (role == null || role.trim().isEmpty()) {
+                continue;
+            }
+            String normalizedRole = role.trim().toLowerCase();
+            if (!"admin".equalsIgnoreCase(normalizedRole)
+                    && !"member".equalsIgnoreCase(normalizedRole)
+                    && !"visitor".equalsIgnoreCase(normalizedRole)) {
+                continue;
+            }
+            if ("admin".equalsIgnoreCase(normalizedRole) && !"owner".equalsIgnoreCase(currentRole)) {
+                continue;
+            }
+            Long inviteeUserId = item.getUserId();
+            String email = item.getEmail();
+            User inviteeUser = null;
+            if (inviteeUserId == null && (email == null || email.trim().isEmpty())) {
+                continue;
+            }
+            if (inviteeUserId != null) {
+                Optional<User> inviteeOpt = userRepository.findById(inviteeUserId);
+                if (inviteeOpt.isEmpty()) {
+                    continue;
+                }
+                inviteeUser = inviteeOpt.get();
+                boolean isMember = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, inviteeUserId).isPresent();
+                if (isMember) {
+                    continue;
+                }
+                if (email == null || email.trim().isEmpty()) {
+                    email = inviteeUser.getEmail();
+                }
+            } else if (email != null) {
+                String trimmedEmail = email.trim();
+                if (trimmedEmail.isEmpty()) {
+                    continue;
+                }
+                email = trimmedEmail;
+                Optional<User> userByEmailOpt = userRepository.findByEmail(email);
+                if (userByEmailOpt.isPresent()) {
+                    User user = userByEmailOpt.get();
+                    boolean isMember = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, user.getId()).isPresent();
+                    if (isMember) {
+                        continue;
+                    }
+                    inviteeUser = user;
+                }
+            }
+            if (email == null || email.trim().isEmpty()) {
+                continue;
+            }
+            TeamInvitation invitation = new TeamInvitation();
+            invitation.setTeam(team);
+            invitation.setInviter(inviter);
+            invitation.setInvitee(inviteeUser);
+            invitation.setInviteeEmail(email);
+            invitation.setToken(generateInvitationToken());
+            invitation.setStatus("PENDING");
+            invitation.setExpiresAt(LocalDateTime.now().plusDays(7));
+            TeamInvitation saved = teamInvitationRepository.save(invitation);
+            TeamInvitationItemResponse dto = new TeamInvitationItemResponse();
+            if (saved.getInvitee() != null) {
+                dto.setInviteeId(saved.getInvitee().getId());
+            }
+            dto.setInviteeEmail(saved.getInviteeEmail());
+            dto.setRole(normalizedRole);
+            dto.setStatus(saved.getStatus());
+            invitationDtos.add(dto);
+            successCount++;
+        }
+        TeamInvitationSendResponse response = new TeamInvitationSendResponse();
+        response.setTotalInvited(totalInvited);
+        response.setSuccessCount(successCount);
+        response.setInvitations(invitationDtos);
+        return response;
+    }
+
     private TeamListItemResponse toTeamListItem(TeamMember membership) {
         Team team = membership.getTeam();
         if (team == null) {
@@ -350,5 +651,11 @@ public class TeamService {
             return "member".equalsIgnoreCase(targetRole) || "visitor".equalsIgnoreCase(targetRole);
         }
         return false;
+    }
+
+    private String generateInvitationToken() {
+        String part1 = UUID.randomUUID().toString().replace("-", "");
+        String part2 = UUID.randomUUID().toString().replace("-", "");
+        return part1 + part2;
     }
 }

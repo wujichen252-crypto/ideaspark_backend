@@ -9,7 +9,11 @@ import com.ideaspark.project.model.dto.request.UserRegisterRequest;
 import com.ideaspark.project.model.dto.request.UserUpdateRequest;
 import com.ideaspark.project.model.dto.response.LoginResponse;
 import com.ideaspark.project.model.dto.response.UserResponse;
+import com.ideaspark.project.model.entity.Team;
+import com.ideaspark.project.model.entity.TeamMember;
 import com.ideaspark.project.model.entity.User;
+import com.ideaspark.project.repository.TeamMemberRepository;
+import com.ideaspark.project.repository.TeamRepository;
 import com.ideaspark.project.repository.UserRepository;
 import com.ideaspark.project.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +32,11 @@ import java.security.NoSuchAlgorithmException;
 public class UserService {
 
     private final UserRepository userRepository;
+
+    private final TeamRepository teamRepository;
+
+    private final TeamMemberRepository teamMemberRepository;
+
     private final JwtUtil jwtUtil;
 
     /**
@@ -89,6 +98,17 @@ public class UserService {
         user.setRole("USER");
 
         User saved = userRepository.save(user);
+        Team team = new Team();
+        team.setOwner(saved);
+        team.setName(saved.getUsername());
+        team.setIsPersonal(true);
+        team.setTeamSize(1);
+        Team savedTeam = teamRepository.save(team);
+        TeamMember ownerMember = new TeamMember();
+        ownerMember.setTeam(savedTeam);
+        ownerMember.setUser(saved);
+        ownerMember.setRole("owner");
+        teamMemberRepository.save(ownerMember);
         return toUserResponse(saved);
     }
 

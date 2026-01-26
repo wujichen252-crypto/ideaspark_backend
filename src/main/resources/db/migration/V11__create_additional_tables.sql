@@ -15,7 +15,7 @@ CREATE TABLE teams (
 CREATE INDEX idx_teams_owner_id ON teams(owner_id);
 
 CREATE TABLE team_members (
-    id VARCHAR(36) PRIMARY KEY COMMENT '记录唯一标识',
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '记录唯一标识',
     team_id VARCHAR(36) NOT NULL COMMENT '团队 ID',
     user_id BIGINT NOT NULL COMMENT '用户 ID',
     role VARCHAR(20) NOT NULL COMMENT '角色 (owner, admin, member, visitor)',

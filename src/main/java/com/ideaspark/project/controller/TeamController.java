@@ -2,14 +2,22 @@ package com.ideaspark.project.controller;
 
 import com.ideaspark.project.model.dto.request.TeamCreateCollaborationRequest;
 import com.ideaspark.project.model.dto.request.TeamDissolveRequest;
+import com.ideaspark.project.model.dto.request.TeamInvitationSendRequest;
 import com.ideaspark.project.model.dto.request.TeamMemberListRequest;
+import com.ideaspark.project.model.dto.request.TeamMemberRoleUpdateRequest;
 import com.ideaspark.project.model.dto.request.TeamMyListRequest;
 import com.ideaspark.project.model.dto.request.TeamUpdateRequest;
+import com.ideaspark.project.model.dto.request.TeamTransferOwnershipRequest;
 import com.ideaspark.project.model.dto.response.TeamCreateCollaborationResponse;
 import com.ideaspark.project.model.dto.response.TeamDetailResponse;
 import com.ideaspark.project.model.dto.response.TeamDissolveResponse;
+import com.ideaspark.project.model.dto.response.TeamInvitationSendResponse;
 import com.ideaspark.project.model.dto.response.TeamListItemResponse;
 import com.ideaspark.project.model.dto.response.TeamMemberListItemResponse;
+import com.ideaspark.project.model.dto.response.TeamMemberRoleUpdateResponse;
+import com.ideaspark.project.model.dto.response.TeamMemberRemoveResponse;
+import com.ideaspark.project.model.dto.response.TeamExitResponse;
+import com.ideaspark.project.model.dto.response.TeamTransferOwnershipResponse;
 import com.ideaspark.project.model.dto.response.TeamUpdateResponse;
 import com.ideaspark.project.service.TeamService;
 import lombok.RequiredArgsConstructor;
@@ -119,6 +127,66 @@ public class TeamController {
                 "status", 200,
                 "message", "获取成功",
                 "data", data
+        ));
+    }
+
+    @PutMapping("/{uuid}/members/{memberId}/role")
+    public ResponseEntity<?> updateMemberRole(@PathVariable("uuid") String teamUuid,
+                                              @PathVariable("memberId") String memberId,
+                                              @RequestAttribute("userId") Long userId,
+                                              @RequestBody TeamMemberRoleUpdateRequest request) {
+        TeamMemberRoleUpdateResponse result = teamService.updateMemberRole(teamUuid, memberId, userId, request);
+        return ResponseEntity.ok(Map.of(
+                "status", 200,
+                "message", "成员角色修改成功",
+                "data", result
+        ));
+    }
+
+    @DeleteMapping("/{uuid}/members/{memberId}")
+    public ResponseEntity<?> removeMember(@PathVariable("uuid") String teamUuid,
+                                          @PathVariable("memberId") String memberId,
+                                          @RequestAttribute("userId") Long userId) {
+        TeamMemberRemoveResponse result = teamService.removeMember(teamUuid, memberId, userId);
+        return ResponseEntity.ok(Map.of(
+                "status", 200,
+                "message", "成员移除成功",
+                "data", result
+        ));
+    }
+
+    @DeleteMapping("/{uuid}/members/self")
+    public ResponseEntity<?> exitTeam(@PathVariable("uuid") String teamUuid,
+                                      @RequestAttribute("userId") Long userId) {
+        TeamExitResponse result = teamService.exitTeam(teamUuid, userId);
+        return ResponseEntity.ok(Map.of(
+                "status", 200,
+                "message", "成功退出团队",
+                "data", result
+        ));
+    }
+
+    @PostMapping("/{uuid}/transfer-ownership")
+    public ResponseEntity<?> transferOwnership(@PathVariable("uuid") String teamUuid,
+                                               @RequestAttribute("userId") Long userId,
+                                               @RequestBody TeamTransferOwnershipRequest request) {
+        TeamTransferOwnershipResponse result = teamService.transferOwnership(teamUuid, userId, request);
+        return ResponseEntity.ok(Map.of(
+                "status", 200,
+                "message", "团队所有权转让成功",
+                "data", result
+        ));
+    }
+
+    @PostMapping("/{uuid}/invitations")
+    public ResponseEntity<?> sendInvitations(@PathVariable("uuid") String teamUuid,
+                                             @RequestAttribute("userId") Long userId,
+                                             @RequestBody TeamInvitationSendRequest request) {
+        TeamInvitationSendResponse result = teamService.sendInvitations(teamUuid, userId, request);
+        return ResponseEntity.status(201).body(Map.of(
+                "status", 201,
+                "message", "邀请发送成功",
+                "data", result
         ));
     }
 }

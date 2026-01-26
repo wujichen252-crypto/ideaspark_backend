@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface TeamMemberRepository extends JpaRepository<TeamMember, String> {
+public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
 
     Page<TeamMember> findByUser_Id(Long userId, Pageable pageable);
 
