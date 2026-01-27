@@ -7,5 +7,9 @@ import java.util.List;
 @Data
 public class TeamInvitationSendRequest {
 
-    private List<TeamInvitationInviteeRequest> invitees;
+    private String type;
+
+    private String role;
+
+    private List<String> emails;
 }

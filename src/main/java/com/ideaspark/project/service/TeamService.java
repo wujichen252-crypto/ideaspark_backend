@@ -3,7 +3,6 @@ package com.ideaspark.project.service;
 import com.ideaspark.project.exception.BusinessException;
 import com.ideaspark.project.model.dto.request.TeamCreateCollaborationRequest;
 import com.ideaspark.project.model.dto.request.TeamDissolveRequest;
-import com.ideaspark.project.model.dto.request.TeamInvitationInviteeRequest;
 import com.ideaspark.project.model.dto.request.TeamInvitationSendRequest;
 import com.ideaspark.project.model.dto.request.TeamMemberListRequest;
 import com.ideaspark.project.model.dto.request.TeamMemberRoleUpdateRequest;
@@ -42,7 +41,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -462,8 +463,18 @@ public class TeamService {
         if (teamUuid == null || teamUuid.trim().isEmpty()) {
             throw new BusinessException("团队UUID不能为空");
         }
-        if (request == null || request.getInvitees() == null || request.getInvitees().isEmpty()) {
-            throw new BusinessException("邀请列表不能为空");
+        if (request == null) {
+            throw new BusinessException("请求参数不能为空");
+        }
+        String type = request.getType() != null ? request.getType().trim().toLowerCase() : null;
+        if (type == null || type.isEmpty()) {
+            throw new BusinessException("邀请方式不能为空");
+        }
+        if (!"link".equals(type) && !"email".equals(type)) {
+            throw new BusinessException("邀请方式不合法");
+        }
+        if (request.getRole() == null || request.getRole().trim().isEmpty()) {
+            throw new BusinessException("邀请角色不能为空");
         }
         Team team = teamRepository.findById(teamUuid)
                 .orElseThrow(() -> new BusinessException("团队不存在"));
@@ -473,70 +484,67 @@ public class TeamService {
         if (currentRole == null || (!"owner".equalsIgnoreCase(currentRole) && !"admin".equalsIgnoreCase(currentRole))) {
             throw new BusinessException("无权限发送团队邀请");
         }
+        String role = request.getRole().trim().toLowerCase();
+        if (!"admin".equalsIgnoreCase(role) && !"member".equalsIgnoreCase(role) && !"visitor".equalsIgnoreCase(role)) {
+            throw new BusinessException("邀请角色不合法");
+        }
+        if ("admin".equalsIgnoreCase(role) && !"owner".equalsIgnoreCase(currentRole)) {
+            throw new BusinessException("仅团队所有者可以邀请管理员");
+        }
+        if ("link".equals(type)) {
+            User inviter = membership.getUser();
+            TeamInvitation invitation = new TeamInvitation();
+            invitation.setTeam(team);
+            invitation.setInviter(inviter);
+            invitation.setRole(role);
+            invitation.setToken(generateInvitationToken());
+            invitation.setStatus("PENDING");
+            invitation.setExpiresAt(LocalDateTime.now().plusDays(7));
+            TeamInvitation saved = teamInvitationRepository.save(invitation);
+            TeamInvitationItemResponse dto = new TeamInvitationItemResponse();
+            dto.setRole(role);
+            dto.setStatus(saved.getStatus());
+            dto.setToken(saved.getToken());
+            dto.setExpiresAt(saved.getExpiresAt());
+            List<TeamInvitationItemResponse> invitationDtos = List.of(dto);
+            TeamInvitationSendResponse response = new TeamInvitationSendResponse();
+            response.setTotalInvited(1);
+            response.setSuccessCount(1);
+            response.setInvitations(invitationDtos);
+            return response;
+        }
+        List<String> emails = request.getEmails();
+        if (emails == null || emails.isEmpty()) {
+            throw new BusinessException("邮箱列表不能为空");
+        }
         User inviter = membership.getUser();
-        int totalInvited = request.getInvitees().size();
+        int totalInvited = emails.size();
         int successCount = 0;
         List<TeamInvitationItemResponse> invitationDtos = new ArrayList<>();
-        for (TeamInvitationInviteeRequest item : request.getInvitees()) {
-            if (item == null) {
+        for (String rawEmail : emails) {
+            if (rawEmail == null) {
                 continue;
             }
-            String role = item.getRole();
-            if (role == null || role.trim().isEmpty()) {
+            String email = rawEmail.trim();
+            if (email.isEmpty()) {
                 continue;
             }
-            String normalizedRole = role.trim().toLowerCase();
-            if (!"admin".equalsIgnoreCase(normalizedRole)
-                    && !"member".equalsIgnoreCase(normalizedRole)
-                    && !"visitor".equalsIgnoreCase(normalizedRole)) {
-                continue;
-            }
-            if ("admin".equalsIgnoreCase(normalizedRole) && !"owner".equalsIgnoreCase(currentRole)) {
-                continue;
-            }
-            Long inviteeUserId = item.getUserId();
-            String email = item.getEmail();
             User inviteeUser = null;
-            if (inviteeUserId == null && (email == null || email.trim().isEmpty())) {
-                continue;
-            }
-            if (inviteeUserId != null) {
-                Optional<User> inviteeOpt = userRepository.findById(inviteeUserId);
-                if (inviteeOpt.isEmpty()) {
-                    continue;
-                }
-                inviteeUser = inviteeOpt.get();
-                boolean isMember = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, inviteeUserId).isPresent();
+            Optional<User> userByEmailOpt = userRepository.findByEmail(email);
+            if (userByEmailOpt.isPresent()) {
+                User user = userByEmailOpt.get();
+                boolean isMember = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, user.getId()).isPresent();
                 if (isMember) {
                     continue;
                 }
-                if (email == null || email.trim().isEmpty()) {
-                    email = inviteeUser.getEmail();
-                }
-            } else if (email != null) {
-                String trimmedEmail = email.trim();
-                if (trimmedEmail.isEmpty()) {
-                    continue;
-                }
-                email = trimmedEmail;
-                Optional<User> userByEmailOpt = userRepository.findByEmail(email);
-                if (userByEmailOpt.isPresent()) {
-                    User user = userByEmailOpt.get();
-                    boolean isMember = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, user.getId()).isPresent();
-                    if (isMember) {
-                        continue;
-                    }
-                    inviteeUser = user;
-                }
-            }
-            if (email == null || email.trim().isEmpty()) {
-                continue;
+                inviteeUser = user;
             }
             TeamInvitation invitation = new TeamInvitation();
             invitation.setTeam(team);
             invitation.setInviter(inviter);
             invitation.setInvitee(inviteeUser);
             invitation.setInviteeEmail(email);
+            invitation.setRole(role);
             invitation.setToken(generateInvitationToken());
             invitation.setStatus("PENDING");
             invitation.setExpiresAt(LocalDateTime.now().plusDays(7));
@@ -546,8 +554,10 @@ public class TeamService {
                 dto.setInviteeId(saved.getInvitee().getId());
             }
             dto.setInviteeEmail(saved.getInviteeEmail());
-            dto.setRole(normalizedRole);
+            dto.setRole(role);
             dto.setStatus(saved.getStatus());
+            dto.setToken(saved.getToken());
+            dto.setExpiresAt(saved.getExpiresAt());
             invitationDtos.add(dto);
             successCount++;
         }
@@ -651,6 +661,96 @@ public class TeamService {
             return "member".equalsIgnoreCase(targetRole) || "visitor".equalsIgnoreCase(targetRole);
         }
         return false;
+    }
+
+    @Transactional
+    public Map<String, Object> validateInvitationToken(String token, Long userId) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        String trimmedToken = token != null ? token.trim() : null;
+        if (trimmedToken == null || trimmedToken.isEmpty()) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("valid", false);
+            data.put("reason", "INVALID_TOKEN");
+            return data;
+        }
+        Optional<TeamInvitation> invitationOpt = teamInvitationRepository.findFirstByToken(trimmedToken);
+        if (invitationOpt.isEmpty()) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("valid", false);
+            data.put("reason", "EXPIRED");
+            return data;
+        }
+        TeamInvitation invitation = invitationOpt.get();
+        Team team = invitation.getTeam();
+        if (team == null) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("valid", false);
+            data.put("reason", "EXPIRED");
+            return data;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (invitation.getExpiresAt() != null && invitation.getExpiresAt().isBefore(now)) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("valid", false);
+            data.put("reason", "EXPIRED");
+            return data;
+        }
+        if (invitation.getStatus() != null && !"PENDING".equalsIgnoreCase(invitation.getStatus())) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("valid", false);
+            data.put("reason", "EXPIRED");
+            return data;
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("用户不存在"));
+        boolean alreadyMember = teamMemberRepository.findByTeam_UuidAndUser_Id(team.getUuid(), user.getId()).isPresent();
+        boolean joined = false;
+        if (!alreadyMember) {
+            String invitationRole = invitation.getRole();
+            String memberRole;
+            if (invitationRole != null && !invitationRole.trim().isEmpty()) {
+                String r = invitationRole.trim().toLowerCase();
+                if ("admin".equals(r) || "member".equals(r) || "visitor".equals(r)) {
+                    memberRole = r;
+                } else {
+                    memberRole = "member";
+                }
+            } else {
+                memberRole = "member";
+            }
+            TeamMember member = new TeamMember();
+            member.setTeam(team);
+            member.setUser(user);
+            member.setRole(memberRole);
+            teamMemberRepository.save(member);
+            Integer size = team.getTeamSize();
+            if (size == null) {
+                size = 0;
+            }
+            team.setTeamSize(size + 1);
+            teamRepository.save(team);
+            joined = true;
+        }
+        invitation.setStatus("ACCEPTED");
+        teamInvitationRepository.save(invitation);
+        User inviter = invitation.getInviter();
+        Map<String, Object> invitationInfo = new HashMap<>();
+        if (team != null) {
+            invitationInfo.put("teamId", team.getUuid());
+            invitationInfo.put("teamName", team.getName());
+            invitationInfo.put("teamAvatar", team.getAvatarUrl());
+        }
+        if (inviter != null) {
+            invitationInfo.put("inviterName", inviter.getUsername());
+        }
+        invitationInfo.put("role", invitation.getRole());
+        Map<String, Object> data = new HashMap<>();
+        data.put("valid", true);
+        data.put("invitation", invitationInfo);
+        data.put("joined", joined);
+        return data;
     }
 
     private String generateInvitationToken() {

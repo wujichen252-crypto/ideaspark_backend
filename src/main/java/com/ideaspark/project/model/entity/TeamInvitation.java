@@ -36,6 +36,9 @@ public class TeamInvitation {
     @Column(name = "invitee_email", length = 100)
     private String inviteeEmail;
 
+    @Column(name = "role", length = 20)
+    private String role;
+
     @Column(name = "token", nullable = false, length = 64)
     private String token;
 
