@@ -9,9 +9,9 @@ spring:
     clean-disabled: true
     validate-on-migrate: false
   datasource:
-    url: jdbc:mysql://62.234.128.72:3306/ideaspark?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: ideaspark
-    password: icG62wSHYaaPKGX6
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -46,7 +46,7 @@ management:
       show-details: when_authorized
 
 jwt:
-  secret: ideaspark_secret_key_default_for_dev_123456
+  secret: ${JWT_SECRET}
   expire-seconds: 3600
   issuer: ideaspark
 
