@@ -151,20 +151,14 @@ public class ProjectMarketService {
         dto.setId(project.getId());
         dto.setName(project.getName());
         dto.setDescription(project.getDescription());
-        dto.setDetailedDescription(project.getDetailedDescription());
         dto.setCategory(project.getCategory());
         dto.setCoverUrl(project.getCoverUrl());
-        dto.setType(project.getType());
-        dto.setCurrentModule(project.getCurrentModule());
         dto.setStatus(project.getStatus());
         dto.setProgress(project.getProgress());
         dto.setVisibility(project.getVisibility());
         dto.setAllowFork(project.getAllowFork());
         dto.setCreatedAt(project.getCreatedAt());
         dto.setUpdatedAt(project.getUpdatedAt());
-        if (project.getParent() != null) {
-            dto.setParentId(project.getParent().getId());
-        }
         User owner = project.getOwner();
         if (owner != null) {
             dto.setOwnerId(owner.getId());

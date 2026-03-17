@@ -32,30 +32,17 @@ public class Project {
     @JoinColumn(name = "team_id")
     private Team team;
 
-    @ManyToOne
-    @JoinColumn(name = "parent_id")
-    private Project parent;
-
     @Column(name = "name", nullable = false, length = 100)
     private String name;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "detailed_description", columnDefinition = "TEXT")
-    private String detailedDescription;
-
     @Column(name = "category", length = 50)
     private String category;
 
     @Column(name = "cover_url", length = 255)
     private String coverUrl;
-
-    @Column(name = "type", length = 20)
-    private String type;
-
-    @Column(name = "current_module", length = 30)
-    private String currentModule;
 
     @Column(name = "status", length = 20)
     private String status;
