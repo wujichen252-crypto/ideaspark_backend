@@ -3,10 +3,9 @@ package com.ideaspark.project.model.dto.response;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
-public class ProjectMarketDetailResponse {
+public class ProjectMyListItemResponse {
 
     private String id;
 
@@ -18,8 +17,6 @@ public class ProjectMarketDetailResponse {
 
     private String coverUrl;
 
-    private String type;
-
     private String status;
 
     private Integer progress;
@@ -28,29 +25,18 @@ public class ProjectMarketDetailResponse {
 
     private Boolean allowFork;
 
-    private LocalDateTime createdAt;
-
-    private LocalDateTime updatedAt;
-
-    private String parentId;
-
     private Long ownerId;
 
     private String ownerName;
-
-    private String ownerAvatar;
 
     private String teamId;
 
     private String teamName;
 
-    private String teamAvatar;
+    private String myRole;
 
-    private Boolean teamIsPersonal;
+    private LocalDateTime createdAt;
 
-    private Integer teamSize;
-
-    private Long likeCount;
-
-    private List<String> tags;
+    private LocalDateTime updatedAt;
 }
+

@@ -17,4 +17,16 @@ public interface ProjectRepository extends JpaRepository<Project, String> {
     Page<Project> searchMarketProjects(@Param("keyword") String keyword, @Param("category") String category, Pageable pageable);
 
     Optional<Project> findByIdAndVisibility(String id, String visibility);
+
+    @Query("""
+            select distinct p from Project p
+            left join ProjectMember pm on pm.project = p
+            where (p.owner.id = :userId or pm.user.id = :userId)
+            and (:keyword is null or lower(p.name) like lower(concat('%', :keyword, '%')))
+            and (:status is null or p.status = :status)
+            """)
+    Page<Project> findMyProjects(@Param("userId") Long userId,
+                                 @Param("keyword") String keyword,
+                                 @Param("status") String status,
+                                 Pageable pageable);
 }

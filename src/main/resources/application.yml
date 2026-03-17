@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8081
 
 spring:
   application:
@@ -9,9 +9,9 @@ spring:
     clean-disabled: true
     validate-on-migrate: false
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:mysql://62.234.128.72:3306/ideaspark?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:ideaspark}
+    password: ${DB_PASSWORD:icG62wSHYaaPKGX6}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
