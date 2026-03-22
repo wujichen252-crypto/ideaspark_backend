@@ -8,6 +8,7 @@ import com.ideaspark.project.util.ResponseUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/api/follows")
+@Transactional
 public class UserFollowController {
 
     @Autowired
@@ -99,7 +101,16 @@ public class UserFollowController {
         }
 
         List<UserFollow> follows = userFollowRepository.findByFollowerId(currentUserId);
-        return ResponseEntity.ok(follows);
+        List<java.util.Map<String, Object>> result = follows.stream().map(f -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", f.getId());
+            map.put("followingId", f.getFollowing().getId());
+            map.put("followingName", f.getFollowing().getUsername());
+            map.put("followingAvatar", f.getFollowing().getAvatar());
+            map.put("createdAt", f.getCreatedAt());
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+        return ResponseUtil.success(result);
     }
 
     /**
@@ -113,7 +124,16 @@ public class UserFollowController {
         }
 
         List<UserFollow> follows = userFollowRepository.findByFollowingId(currentUserId);
-        return ResponseEntity.ok(follows);
+        List<java.util.Map<String, Object>> result = follows.stream().map(f -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", f.getId());
+            map.put("followerId", f.getFollower().getId());
+            map.put("followerName", f.getFollower().getUsername());
+            map.put("followerAvatar", f.getFollower().getAvatar());
+            map.put("createdAt", f.getCreatedAt());
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+        return ResponseUtil.success(result);
     }
 
     /**
@@ -182,7 +202,16 @@ public class UserFollowController {
     @GetMapping("/user/{userId}/following")
     public ResponseEntity<?> getFollowingListByUserId(@PathVariable Long userId) {
         List<UserFollow> follows = userFollowRepository.findByFollowerId(userId);
-        return ResponseEntity.ok(follows);
+        List<java.util.Map<String, Object>> result = follows.stream().map(f -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", f.getId());
+            map.put("followingId", f.getFollowing().getId());
+            map.put("followingName", f.getFollowing().getUsername());
+            map.put("followingAvatar", f.getFollowing().getAvatar());
+            map.put("createdAt", f.getCreatedAt());
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+        return ResponseUtil.success(result);
     }
 
     /**
@@ -191,7 +220,16 @@ public class UserFollowController {
     @GetMapping("/user/{userId}/followers")
     public ResponseEntity<?> getFollowerListByUserId(@PathVariable Long userId) {
         List<UserFollow> follows = userFollowRepository.findByFollowingId(userId);
-        return ResponseEntity.ok(follows);
+        List<java.util.Map<String, Object>> result = follows.stream().map(f -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", f.getId());
+            map.put("followerId", f.getFollower().getId());
+            map.put("followerName", f.getFollower().getUsername());
+            map.put("followerAvatar", f.getFollower().getAvatar());
+            map.put("createdAt", f.getCreatedAt());
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+        return ResponseUtil.success(result);
     }
 
     /**
