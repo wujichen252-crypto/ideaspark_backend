@@ -12,14 +12,31 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final JwtAuthenticationInterceptor jwtAuthenticationInterceptor;
 
+    /**
+     * 配置JWT拦截器
+     * 排除不需要认证的公开接口
+     * 注意：部分接口GET请求公开访问由拦截器内部处理
+     */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(jwtAuthenticationInterceptor)
-                .addPathPatterns("/api/**") // 拦截所有 api 请求
+                .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/user/login",
                         "/api/user/register",
-                        "/api/public/**" // 假设有公共接口
+                        "/api/public/**",
+                        "/api/market/projects/list",
+                        "/api/market/projects/*",
+                        "/api/community/groups",
+                        "/api/community/groups/*",
+                        "/api/community/groups/*/members",
+                        "/api/community/likes/post/*/count",
+                        "/api/community/likes/comment/*/count",
+                        "/api/follows/user/*",
+                        "/api/follows/user/*/following",
+                        "/api/follows/user/*/followers",
+                        "/api/follows/user/*/following/count",
+                        "/api/follows/user/*/followers/count"
                 );
     }
 

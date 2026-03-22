@@ -2,14 +2,981 @@
   "openapi": "3.0.3",
   "info": {
     "title": "IdeaSpark API",
-    "version": "0.0.1"
+    "version": "2.0.0",
+    "description": "IdeaSpark 创新项目管理平台 API 文档"
+  },
+  "servers": [
+    {
+      "url": "http://47.108.232.238:9000",
+      "description": "生产环境"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "开发环境"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "example": 200
+          },
+          "message": {
+            "type": "string",
+            "example": "操作成功"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "UserLoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          }
+        }
+      },
+      "UserRegisterRequest": {
+        "type": "object",
+        "required": ["username", "email", "password"],
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "张三"
+          },
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password123"
+          }
+        }
+      },
+      "UserUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "example": "李四"
+          },
+          "email": {
+            "type": "string",
+            "example": "newemail@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "newpassword123"
+          }
+        }
+      },
+      "UserDeleteRequest": {
+        "type": "object",
+        "required": ["userIds"],
+        "properties": {
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "example": [1, 2, 3]
+          }
+        }
+      },
+      "TeamCreateCollaborationRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "新产品开发团队"
+          },
+          "description": {
+            "type": "string",
+            "example": "负责新产品的开发"
+          }
+        }
+      },
+      "TeamUpdateRequest": {
+        "type": "object",
+        "required": ["uuid"],
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "待更新团队的唯一标识符"
+          },
+          "name": {
+            "type": "string",
+            "example": "前端开发团队"
+          },
+          "description": {
+            "type": "string",
+            "example": "负责前端开发的团队"
+          }
+        }
+      },
+      "TeamTransferOwnershipRequest": {
+        "type": "object",
+        "required": ["uuid", "newOwnerId"],
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "团队的唯一标识符"
+          },
+          "newOwnerId": {
+            "type": "integer",
+            "example": 2
+          }
+        }
+      },
+      "TeamInvitationSendRequest": {
+        "type": "object",
+        "required": ["uuid", "emails", "role"],
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "团队的唯一标识符"
+          },
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["user1@example.com", "user2@example.com"]
+          },
+          "role": {
+            "type": "string",
+            "enum": ["ADMIN", "MEMBER"],
+            "example": "MEMBER"
+          }
+        }
+      },
+      "TeamMemberRoleUpdateRequest": {
+        "type": "object",
+        "required": ["uuid", "memberId", "role"],
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "description": "团队的唯一标识符"
+          },
+          "memberId": {
+            "type": "string",
+            "description": "成员的唯一标识符"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["OWNER", "ADMIN", "MEMBER"],
+            "example": "ADMIN"
+          }
+        }
+      },
+      "CommunityPostCreateRequest": {
+        "type": "object",
+        "required": ["title", "content"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "example": "我的创新项目分享"
+          },
+          "content": {
+            "type": "string",
+            "example": "大家好，今天分享一下我的创新项目..."
+          },
+          "images": {
+            "type": "string",
+            "example": "https://example.com/img1.jpg,https://example.com/img2.jpg"
+          },
+          "tags": {
+            "type": "string",
+            "example": "创新，创业，技术"
+          },
+          "channel": {
+            "type": "string",
+            "example": "技术分享"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": ["PUBLIC", "PRIVATE"],
+            "default": "PUBLIC"
+          },
+          "projectId": {
+            "type": "string",
+            "example": "project-123"
+          }
+        }
+      },
+      "CommunityPostUpdateRequest": {
+        "type": "object",
+        "required": ["postId"],
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "待更新帖子的唯一标识符"
+          },
+          "title": {
+            "type": "string",
+            "example": "更新后的标题"
+          },
+          "content": {
+            "type": "string",
+            "example": "更新后的内容..."
+          },
+          "images": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string",
+            "enum": ["PUBLIC", "PRIVATE"]
+          }
+        }
+      },
+      "CommunityCommentCreateRequest": {
+        "type": "object",
+        "required": ["postId", "content"],
+        "properties": {
+          "postId": {
+            "type": "string",
+            "example": "post-123"
+          },
+          "content": {
+            "type": "string",
+            "example": "写得很好，学习了！"
+          },
+          "parentId": {
+            "type": "string",
+            "example": "comment-456"
+          }
+        }
+      },
+      "CommunityGroupCreateRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "创新创业交流群"
+          },
+          "keyword": {
+            "type": "string",
+            "example": "创新创业"
+          },
+          "description": {
+            "type": "string",
+            "example": "专注于创新创业项目的交流群"
+          },
+          "iconUrl": {
+            "type": "string",
+            "example": "https://example.com/icon.jpg"
+          },
+          "coverUrl": {
+            "type": "string",
+            "example": "https://example.com/cover.jpg"
+          }
+        }
+      },
+      "SignApplicationStatsSummary": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int32",
+            "example": 18
+          },
+          "rejected": {
+            "type": "integer",
+            "format": "int32",
+            "example": 3
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int32",
+            "example": 5
+          },
+          "approved": {
+            "type": "integer",
+            "format": "int32",
+            "example": 10
+          }
+        }
+      },
+      "SignApplicationStatsResponse": {
+        "type": "object",
+        "properties": {
+          "overall": {
+            "$ref": "#/components/schemas/SignApplicationStatsSummary"
+          },
+          "groups": {
+            "type": "object",
+            "properties": {
+              "primary": {
+                "$ref": "#/components/schemas/SignApplicationStatsSummary"
+              },
+              "middle": {
+                "$ref": "#/components/schemas/SignApplicationStatsSummary"
+              }
+            }
+          }
+        }
+      }
+    }
   },
   "paths": {
+    "/api/user/login": {
+      "post": {
+        "tags": ["User"],
+        "summary": "用户登录",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/register": {
+      "post": {
+        "tags": ["User"],
+        "summary": "用户注册",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "注册成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/update": {
+      "post": {
+        "tags": ["User"],
+        "summary": "更新用户信息",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/getAllUsers": {
+      "get": {
+        "tags": ["User"],
+        "summary": "查询用户列表",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "description": "每页大小"
+          },
+          {
+            "name": "username",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "用户名搜索"
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "邮箱搜索"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/user/deleteUsers": {
+      "post": {
+        "tags": ["User"],
+        "summary": "删除用户",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserDeleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/my": {
+      "get": {
+        "tags": ["Team"],
+        "summary": "获取我的团队",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 50
+            },
+            "description": "每页大小"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/detail": {
+      "get": {
+        "tags": ["Team"],
+        "summary": "获取团队详情",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "团队的唯一标识符"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/collaboration": {
+      "post": {
+        "tags": ["Team"],
+        "summary": "创建协作团队",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamCreateCollaborationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "协作团队创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/update": {
+      "put": {
+        "tags": ["Team"],
+        "summary": "更新团队信息",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "团队信息更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/dissolve": {
+      "delete": {
+        "tags": ["Team"],
+        "summary": "解散团队",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["uuid"],
+                "properties": {
+                  "uuid": {
+                    "type": "string",
+                    "description": "待解散团队的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "团队解散成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/members": {
+      "get": {
+        "tags": ["Team"],
+        "summary": "获取团队成员",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "团队UUID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 50
+            },
+            "description": "每页大小"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/members/role": {
+      "put": {
+        "tags": ["Team"],
+        "summary": "更新成员角色",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamMemberRoleUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成员角色修改成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/members/remove": {
+      "delete": {
+        "tags": ["Team"],
+        "summary": "移除成员",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["uuid", "memberId"],
+                "properties": {
+                  "uuid": {
+                    "type": "string",
+                    "description": "团队的唯一标识符"
+                  },
+                  "memberId": {
+                    "type": "string",
+                    "description": "成员的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成员移除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/members/exit": {
+      "delete": {
+        "tags": ["Team"],
+        "summary": "退出团队",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["uuid"],
+                "properties": {
+                  "uuid": {
+                    "type": "string",
+                    "description": "团队的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功退出团队",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/transfer-ownership": {
+      "post": {
+        "tags": ["Team"],
+        "summary": "转让所有权",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamTransferOwnershipRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "团队所有权转让成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/teams/invitations": {
+      "post": {
+        "tags": ["Team"],
+        "summary": "发送邀请",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamInvitationSendRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "邀请发送成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/my": {
+      "get": {
+        "tags": ["Project"],
+        "summary": "获取我的项目",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1,
+              "minimum": 1
+            },
+            "description": "页码"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "minimum": 1,
+              "maximum": 50
+            },
+            "description": "每页大小"
+          },
+          {
+            "name": "keyword",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "搜索关键词"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "项目状态筛选"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/market/projects/list": {
       "get": {
-        "tags": [
-          "ProjectMarket"
-        ],
+        "tags": ["ProjectMarket"],
         "summary": "获取项目市场列表",
         "parameters": [
           {
@@ -62,7 +1029,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectMarketListResponse"
+                  "$ref": "#/components/schemas/ApiResponse"
                 }
               }
             }
@@ -72,9 +1039,7 @@
     },
     "/api/market/projects/detail": {
       "get": {
-        "tags": [
-          "ProjectMarket"
-        ],
+        "tags": ["ProjectMarket"],
         "summary": "获取项目市场详情",
         "parameters": [
           {
@@ -84,7 +1049,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "项目ID"
+            "description": "项目的唯一标识符"
           }
         ],
         "responses": {
@@ -93,187 +1058,1007 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectMarketDetailResponse"
+                  "$ref": "#/components/schemas/ApiResponse"
                 }
               }
             }
           }
         }
       }
-    }
-  },
-  "components": {
-    "schemas": {
-      "ProjectMarketListItem": {
-        "type": "object",
-        "properties": {
-          "projectImage": {
-            "type": "string"
-          },
-          "projectName": {
-            "type": "string"
-          },
-          "ownerName": {
-            "type": "string"
-          },
-          "ownerAvatar": {
-            "type": "string"
-          },
-          "likeCount": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
+    },
+    "/api/community/posts": {
+      "get": {
+        "tags": ["Community"],
+        "summary": "获取帖子列表",
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Community"],
+        "summary": "创建帖子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunityPostCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "帖子创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/posts/detail": {
+      "get": {
+        "tags": ["Community"],
+        "summary": "获取帖子详情",
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "query",
+            "required": true,
+            "schema": {
               "type": "string"
+            },
+            "description": "帖子的唯一标识符"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
             }
           }
         }
-      },
-      "ProjectMarketListResponseData": {
-        "type": "object",
-        "properties": {
-          "projects": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProjectMarketListItem"
+      }
+    },
+    "/api/community/posts/update": {
+      "put": {
+        "tags": ["Community"],
+        "summary": "更新帖子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunityPostUpdateRequest"
+              }
             }
-          },
-          "total": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "page": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "size": {
-            "type": "integer",
-            "format": "int32"
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
           }
         }
-      },
-      "ProjectMarketListResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "example": 200
-          },
-          "message": {
-            "type": "string",
-            "example": "获取成功"
-          },
-          "data": {
-            "$ref": "#/components/schemas/ProjectMarketListResponseData"
+      }
+    },
+    "/api/community/posts/delete": {
+      "delete": {
+        "tags": ["Community"],
+        "summary": "删除帖子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["postId"],
+                "properties": {
+                  "postId": {
+                    "type": "string",
+                    "description": "待删除帖子的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "帖子删除成功（逻辑删除）",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
           }
         }
-      },
-      "ProjectMarketDetail": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "detailedDescription": {
-            "type": "string"
-          },
-          "category": {
-            "type": "string"
-          },
-          "coverUrl": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string"
-          },
-          "currentModule": {
-            "type": "string"
-          },
-          "status": {
-            "type": "string"
-          },
-          "progress": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "visibility": {
-            "type": "string"
-          },
-          "allowFork": {
-            "type": "boolean"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "parentId": {
-            "type": "string"
-          },
-          "ownerId": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "ownerName": {
-            "type": "string"
-          },
-          "ownerAvatar": {
-            "type": "string"
-          },
-          "teamId": {
-            "type": "string"
-          },
-          "teamName": {
-            "type": "string"
-          },
-          "teamAvatar": {
-            "type": "string"
-          },
-          "teamIsPersonal": {
-            "type": "boolean"
-          },
-          "teamSize": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "likeCount": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
+      }
+    },
+    "/api/community/comments": {
+      "post": {
+        "tags": ["Community"],
+        "summary": "发布评论",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunityCommentCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "评论发布成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/comments/post": {
+      "get": {
+        "tags": ["Community"],
+        "summary": "获取帖子的评论",
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "query",
+            "required": true,
+            "schema": {
               "type": "string"
+            },
+            "description": "帖子的唯一标识符"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/comments/update": {
+      "put": {
+        "tags": ["Community"],
+        "summary": "更新评论",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["commentId", "content"],
+                "properties": {
+                  "commentId": {
+                    "type": "string",
+                    "description": "待更新评论的唯一标识符"
+                  },
+                  "content": {
+                    "type": "string",
+                    "example": "更新后的评论内容"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/comments/delete": {
+      "delete": {
+        "tags": ["Community"],
+        "summary": "删除评论",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["commentId"],
+                "properties": {
+                  "commentId": {
+                    "type": "string",
+                    "description": "待删除评论的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "评论删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/groups": {
+      "get": {
+        "tags": ["Community"],
+        "summary": "获取圈子列表",
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
             }
           }
         }
       },
-      "ProjectMarketDetailResponse": {
-        "type": "object",
-        "properties": {
-          "status": {
-            "type": "integer",
-            "format": "int32",
-            "example": 200
+      "post": {
+        "tags": ["Community"],
+        "summary": "创建圈子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommunityGroupCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "圈子创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/groups/detail": {
+      "get": {
+        "tags": ["Community"],
+        "summary": "获取圈子详情",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "圈子的唯一标识符"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/groups/update": {
+      "put": {
+        "tags": ["Community"],
+        "summary": "更新圈子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["groupId"],
+                "properties": {
+                  "groupId": {
+                    "type": "string",
+                    "description": "待更新圈子的唯一标识符"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "keyword": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "iconUrl": {
+                    "type": "string"
+                  },
+                  "coverUrl": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "更新成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/groups/delete": {
+      "delete": {
+        "tags": ["Community"],
+        "summary": "删除圈子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["groupId"],
+                "properties": {
+                  "groupId": {
+                    "type": "string",
+                    "description": "待删除圈子的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "圈子删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/groups/join": {
+      "post": {
+        "tags": ["Community"],
+        "summary": "加入圈子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["groupId"],
+                "properties": {
+                  "groupId": {
+                    "type": "string",
+                    "description": "圈子的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "加入圈子成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/groups/quit": {
+      "delete": {
+        "tags": ["Community"],
+        "summary": "退出圈子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["groupId"],
+                "properties": {
+                  "groupId": {
+                    "type": "string",
+                    "description": "圈子的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "退出圈子成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/likes/post": {
+      "post": {
+        "tags": ["Community"],
+        "summary": "点赞帖子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["postId"],
+                "properties": {
+                  "postId": {
+                    "type": "string",
+                    "description": "帖子的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "帖子点赞成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Community"],
+        "summary": "取消点赞帖子",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["postId"],
+                "properties": {
+                  "postId": {
+                    "type": "string",
+                    "description": "帖子的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "取消帖子点赞成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/community/likes/comment": {
+      "post": {
+        "tags": ["Community"],
+        "summary": "点赞评论",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["commentId"],
+                "properties": {
+                  "commentId": {
+                    "type": "string",
+                    "description": "评论的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "评论点赞成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Community"],
+        "summary": "取消点赞评论",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["commentId"],
+                "properties": {
+                  "commentId": {
+                    "type": "string",
+                    "description": "评论的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "取消评论点赞成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/follows": {
+      "post": {
+        "tags": ["Follow"],
+        "summary": "关注用户",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["followingId"],
+                "properties": {
+                  "followingId": {
+                    "type": "integer",
+                    "description": "被关注用户的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "关注用户成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Follow"],
+        "summary": "取消关注用户",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["followingId"],
+                "properties": {
+                  "followingId": {
+                    "type": "integer",
+                    "description": "被取消关注用户的唯一标识符"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "取消关注用户成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/follows/my/following": {
+      "get": {
+        "tags": ["Follow"],
+        "summary": "获取我的关注列表",
+        "security": [{"BearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/follows/my/followers": {
+      "get": {
+        "tags": ["Follow"],
+        "summary": "获取我的粉丝列表",
+        "security": [{"BearerAuth": []}],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/follows/check": {
+      "get": {
+        "tags": ["Follow"],
+        "summary": "检查是否已关注",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "followingId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "被检查用户的唯一标识符"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "获取成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/file/upload": {
+      "post": {
+        "tags": ["File"],
+        "summary": "上传文件",
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "上传成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/invitations/validate": {
+      "get": {
+        "tags": ["Invitation"],
+        "summary": "验证邀请",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "邀请令牌"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "邀请验证成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/sign/applications/stats": {
+      "get": {
+        "tags": ["Sign"],
+        "summary": "报名审核统计",
+        "security": [{"BearerAuth": []}],
+        "parameters": [
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2025-01-01"
+            },
+            "description": "统计起始日期"
           },
-          "message": {
-            "type": "string",
-            "example": "获取成功"
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2025-12-31"
+            },
+            "description": "统计结束日期"
           },
-          "data": {
-            "$ref": "#/components/schemas/ProjectMarketDetail"
+          {
+            "name": "groups",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["primary", "middle"]
+              }
+            },
+            "style": "form",
+            "explode": true,
+            "description": "统计的组别列表，默认统计两组"
+          },
+          {
+            "name": "include_overall",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "description": "是否包含总体统计"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "统计成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse",
+                  "example": {
+                    "status": 200,
+                    "message": "统计成功",
+                    "data": {
+                      "overall": {
+                        "total": 18,
+                        "rejected": 3,
+                        "pending": 5,
+                        "approved": 10
+                      },
+                      "groups": {
+                        "primary": {
+                          "total": 10,
+                          "rejected": 2,
+                          "pending": 3,
+                          "approved": 5
+                        },
+                        "middle": {
+                          "total": 8,
+                          "rejected": 1,
+                          "pending": 2,
+                          "approved": 5
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/": {
+      "get": {
+        "tags": ["System"],
+        "summary": "主页",
+        "responses": {
+          "200": {
+            "description": "IdeaSpark 后端服务已启动",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ping": {
+      "get": {
+        "tags": ["System"],
+        "summary": "健康检查",
+        "responses": {
+          "200": {
+            "description": "pong",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api": {
+      "get": {
+        "tags": ["System"],
+        "summary": "API 根路径",
+        "responses": {
+          "200": {
+            "description": "API 根路径",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
           }
         }
       }

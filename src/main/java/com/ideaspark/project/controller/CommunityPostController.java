@@ -59,26 +59,60 @@ public class CommunityPostController {
             post.setChannel((String) postData.get("channel"));
             post.setVisibility((String) postData.getOrDefault("visibility", "PUBLIC"));
 
-            // 关联项目（如果提供了projectId）
             if (postData.get("projectId") != null) {
                 String projectId = (String) postData.get("projectId");
                 projectRepository.findById(projectId).ifPresent(post::setProject);
             }
 
             CommunityPost savedPost = communityPostRepository.save(post);
-            return ResponseUtil.created(savedPost);
+            
+            Map<String, Object> result = new java.util.HashMap<>();
+            result.put("id", savedPost.getId());
+            result.put("title", savedPost.getTitle());
+            result.put("content", savedPost.getContent());
+            result.put("createdAt", savedPost.getCreatedAt());
+            return ResponseUtil.created(result);
         } catch (Exception e) {
             return ResponseUtil.error("创建帖子失败：" + e.getMessage(), 400);
         }
     }
 
     /**
-     * 查询所有帖子
+     * 查询所有帖子（公开接口，无需认证）
      */
     @GetMapping
-    public ResponseEntity<List<CommunityPost>> getAllPosts() {
+    public ResponseEntity<?> getAllPosts(HttpServletRequest request) {
         List<CommunityPost> posts = communityPostRepository.findAll();
-        return ResponseEntity.ok(posts);
+        List<Map<String, Object>> result = posts.stream().map(post -> {
+            Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", post.getId());
+            map.put("title", post.getTitle());
+            map.put("content", post.getContent());
+            map.put("images", post.getImages());
+            map.put("tags", post.getTags());
+            map.put("channel", post.getChannel());
+            map.put("visibility", post.getVisibility());
+            map.put("likesCount", post.getLikesCount());
+            map.put("commentsCount", post.getCommentsCount());
+            map.put("viewsCount", post.getViewsCount());
+            map.put("createdAt", post.getCreatedAt());
+            map.put("updatedAt", post.getUpdatedAt());
+            if (post.getAuthor() != null) {
+                Map<String, Object> author = new java.util.HashMap<>();
+                author.put("id", post.getAuthor().getId());
+                author.put("username", post.getAuthor().getUsername());
+                author.put("avatar", post.getAuthor().getAvatar());
+                map.put("author", author);
+            }
+            if (post.getProject() != null) {
+                Map<String, Object> project = new java.util.HashMap<>();
+                project.put("id", post.getProject().getId());
+                project.put("name", post.getProject().getName());
+                map.put("project", project);
+            }
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+        return ResponseUtil.success(result);
     }
 
     /**
