@@ -36,7 +36,11 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/follows/user/*/following",
                         "/api/follows/user/*/followers",
                         "/api/follows/user/*/following/count",
-                        "/api/follows/user/*/followers/count"
+                        "/api/follows/user/*/followers/count",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html",
+                        "/v3/api-docs/**",
+                        "/webjars/**"
                 );
     }
 
