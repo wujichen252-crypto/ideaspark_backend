@@ -7,6 +7,11 @@ import com.ideaspark.project.repository.CommunityPostRepository;
 import com.ideaspark.project.repository.ProjectRepository;
 import com.ideaspark.project.repository.UserRepository;
 import com.ideaspark.project.util.ResponseUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,10 +24,11 @@ import java.util.Optional;
 
 /**
  * 社区帖子控制器
- * 接口路径：/api/community/posts
+ * 提供社区帖子的创建、查询、更新、删除等接口
  */
 @RestController
 @RequestMapping("/api/community/posts")
+@Tag(name = "社区帖子管理", description = "社区帖子的创建、查询、更新、删除等接口")
 public class CommunityPostController {
 
     @Autowired
@@ -38,7 +44,16 @@ public class CommunityPostController {
      * 创建帖子
      */
     @PostMapping
-    public ResponseEntity<?> createPost(@RequestBody Map<String, Object> postData, HttpServletRequest request) {
+    @Operation(summary = "创建帖子", description = "发布新的社区帖子，支持关联项目、添加图片和标签")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "创建成功"),
+        @ApiResponse(responseCode = "400", description = "参数错误"),
+        @ApiResponse(responseCode = "401", description = "未登录")
+    })
+    public ResponseEntity<?> createPost(
+            @Parameter(description = "帖子数据，包含标题、内容、图片、标签等", required = true)
+            @RequestBody Map<String, Object> postData,
+            HttpServletRequest request) {
         try {
             Long userId = (Long) request.getAttribute("userId");
             if (userId == null) {
@@ -81,6 +96,10 @@ public class CommunityPostController {
      * 查询所有帖子（公开接口，无需认证）
      */
     @GetMapping
+    @Operation(summary = "查询所有帖子", description = "获取所有公开的社区帖子列表，无需登录认证")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "查询成功")
+    })
     public ResponseEntity<?> getAllPosts(HttpServletRequest request) {
         List<CommunityPost> posts = communityPostRepository.findAll();
         List<Map<String, Object>> result = posts.stream().map(post -> {
@@ -119,7 +138,14 @@ public class CommunityPostController {
      * 根据ID查询帖子详情
      */
     @GetMapping("/{postId}")
-    public ResponseEntity<?> getPostById(@PathVariable String postId) {
+    @Operation(summary = "获取帖子详情", description = "根据帖子ID获取帖子详细信息，浏览数自动+1")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "404", description = "帖子不存在")
+    })
+    public ResponseEntity<?> getPostById(
+            @Parameter(description = "帖子ID", required = true)
+            @PathVariable String postId) {
         Optional<CommunityPost> postOpt = communityPostRepository.findById(postId);
         if (postOpt.isPresent()) {
             CommunityPost post = postOpt.get();

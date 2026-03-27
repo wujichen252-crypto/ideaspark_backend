@@ -20,6 +20,11 @@ import com.ideaspark.project.model.dto.response.TeamExitResponse;
 import com.ideaspark.project.model.dto.response.TeamTransferOwnershipResponse;
 import com.ideaspark.project.model.dto.response.TeamUpdateResponse;
 import com.ideaspark.project.service.TeamService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -36,16 +41,30 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+/**
+ * 团队管理控制器
+ * 提供团队创建、成员管理、权限管理等接口
+ */
 @RestController
 @RequestMapping("/api/teams")
 @RequiredArgsConstructor
+@Tag(name = "团队管理", description = "团队创建、成员管理、权限管理等接口")
 public class TeamController {
 
     private final TeamService teamService;
 
     @GetMapping("/my")
-    public ResponseEntity<?> getMyTeams(@RequestAttribute("userId") Long userId,
-                                        @ModelAttribute TeamMyListRequest request) {
+    @Operation(summary = "获取我的团队列表", description = "分页获取当前用户加入的所有团队")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "400", description = "参数错误"),
+        @ApiResponse(responseCode = "401", description = "未登录")
+    })
+    public ResponseEntity<?> getMyTeams(
+            @Parameter(description = "用户ID（从token中获取）", hidden = true)
+            @RequestAttribute("userId") Long userId,
+            @Parameter(description = "团队查询参数")
+            @ModelAttribute TeamMyListRequest request) {
         Page<TeamListItemResponse> page = teamService.getMyTeams(userId, request);
         int currentPage = request != null && request.getPage() != null && request.getPage() >= 1
                 ? request.getPage()
@@ -64,8 +83,18 @@ public class TeamController {
     }
 
     @GetMapping("/{uuid}")
-    public ResponseEntity<?> getTeamDetail(@PathVariable("uuid") String teamUuid,
-                                           @RequestAttribute("userId") Long userId) {
+    @Operation(summary = "获取团队详情", description = "根据团队UUID获取团队详细信息")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "400", description = "参数错误"),
+        @ApiResponse(responseCode = "401", description = "未登录"),
+        @ApiResponse(responseCode = "404", description = "团队不存在")
+    })
+    public ResponseEntity<?> getTeamDetail(
+            @Parameter(description = "团队UUID", required = true)
+            @PathVariable("uuid") String teamUuid,
+            @Parameter(description = "用户ID（从token中获取）", hidden = true)
+            @RequestAttribute("userId") Long userId) {
         TeamDetailResponse detail = teamService.getTeamDetail(teamUuid, userId);
         return ResponseEntity.ok(Map.of(
                 "status", 200,
@@ -75,9 +104,20 @@ public class TeamController {
     }
 
     @PutMapping("/{uuid}")
-    public ResponseEntity<?> updateTeam(@PathVariable("uuid") String teamUuid,
-                                        @RequestAttribute("userId") Long userId,
-                                        @RequestBody TeamUpdateRequest request) {
+    @Operation(summary = "更新团队信息", description = "更新团队基本信息（需要团队管理员或所有者权限）")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "更新成功"),
+        @ApiResponse(responseCode = "400", description = "参数错误"),
+        @ApiResponse(responseCode = "401", description = "未登录"),
+        @ApiResponse(responseCode = "403", description = "权限不足")
+    })
+    public ResponseEntity<?> updateTeam(
+            @Parameter(description = "团队UUID", required = true)
+            @PathVariable("uuid") String teamUuid,
+            @Parameter(description = "用户ID（从token中获取）", hidden = true)
+            @RequestAttribute("userId") Long userId,
+            @Parameter(description = "团队更新参数", required = true)
+            @RequestBody TeamUpdateRequest request) {
         TeamUpdateResponse result = teamService.updateTeam(teamUuid, userId, request);
         return ResponseEntity.ok(Map.of(
                 "status", 200,
@@ -87,8 +127,17 @@ public class TeamController {
     }
 
     @PostMapping("/collaboration")
-    public ResponseEntity<?> createCollaborationTeam(@RequestAttribute("userId") Long userId,
-                                                     @RequestBody TeamCreateCollaborationRequest request) {
+    @Operation(summary = "创建协作团队", description = "创建新的协作团队，创建者自动成为团队所有者")
+    @ApiResponses({
+        @ApiResponse(responseCode = "201", description = "创建成功"),
+        @ApiResponse(responseCode = "400", description = "参数错误或团队名称已存在"),
+        @ApiResponse(responseCode = "401", description = "未登录")
+    })
+    public ResponseEntity<?> createCollaborationTeam(
+            @Parameter(description = "用户ID（从token中获取）", hidden = true)
+            @RequestAttribute("userId") Long userId,
+            @Parameter(description = "团队创建参数", required = true)
+            @RequestBody TeamCreateCollaborationRequest request) {
         TeamCreateCollaborationResponse result = teamService.createCollaborationTeam(userId, request);
         return ResponseEntity.status(201).body(Map.of(
                 "status", 201,
