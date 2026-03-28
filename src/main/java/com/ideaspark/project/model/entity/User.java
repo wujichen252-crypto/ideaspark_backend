@@ -1,5 +1,6 @@
 package com.ideaspark.project.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -16,6 +17,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users")
+@JsonIgnoreProperties({"ownedProjects", "projectMemberships", "chatSessions", "communityPosts", "comments", "hibernateLazyInitializer", "handler"})
 public class User {
 
     @Id

@@ -1,5 +1,6 @@
 package com.ideaspark.project.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -16,6 +17,7 @@ import java.util.UUID;
 @Data
 @Entity
 @Table(name = "community_groups")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class CommunityGroup {
 
     @Id
