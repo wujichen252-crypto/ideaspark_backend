@@ -57,7 +57,7 @@ management:
 
 jwt:
   secret: ${JWT_SECRET}
-  expire-seconds: 3600
+  expire-seconds: 604800
   issuer: ideaspark
 
 oss:

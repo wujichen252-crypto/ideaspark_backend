@@ -1,5 +1,7 @@
 package com.ideaspark.project.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ideaspark.project.model.entity.CommunityPost;
 import com.ideaspark.project.model.entity.Project;
 import com.ideaspark.project.model.entity.User;
@@ -18,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +42,8 @@ public class CommunityPostController {
 
     @Autowired
     private ProjectRepository projectRepository;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 创建帖子
@@ -93,6 +98,68 @@ public class CommunityPostController {
     }
 
     /**
+     * 清理URL字符串，去除反引号、空格、换行符等
+     */
+    private String cleanUrlString(String url) {
+        if (url == null) {
+            return "";
+        }
+        // 去除反引号、空格、换行符、回车符
+        return url.replace("`", "")
+                  .replace(" ", "")
+                  .replace("\n", "")
+                  .replace("\r", "")
+                  .replace("\t", "")
+                  .trim();
+    }
+
+    /**
+     * 将JSON字符串转换为List
+     */
+    private List<String> parseJsonStringToList(String jsonString) {
+        if (jsonString == null || jsonString.isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            // 去除首尾空格和反引号
+            String cleaned = jsonString.trim();
+            if (cleaned.startsWith("`") && cleaned.endsWith("`")) {
+                cleaned = cleaned.substring(1, cleaned.length() - 1);
+            }
+            // 解析JSON数组字符串
+            List<String> parsedList = objectMapper.readValue(cleaned, new TypeReference<List<String>>() {});
+            // 清理每个URL
+            return parsedList.stream()
+                    .map(this::cleanUrlString)
+                    .filter(s -> !s.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+        } catch (Exception e) {
+            // 如果解析失败，尝试按逗号分割
+            String cleaned = jsonString.trim();
+            if (cleaned.startsWith("`") && cleaned.endsWith("`")) {
+                cleaned = cleaned.substring(1, cleaned.length() - 1);
+            }
+            if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
+                cleaned = cleaned.substring(1, cleaned.length() - 1);
+            }
+            List<String> result = new ArrayList<>();
+            for (String item : cleaned.split(",")) {
+                String trimmed = item.trim();
+                // 去除引号
+                if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
+                    trimmed = trimmed.substring(1, trimmed.length() - 1);
+                }
+                // 清理URL
+                trimmed = cleanUrlString(trimmed);
+                if (!trimmed.isEmpty()) {
+                    result.add(trimmed);
+                }
+            }
+            return result;
+        }
+    }
+
+    /**
      * 查询所有帖子（公开接口，无需认证）
      */
     @GetMapping
@@ -107,8 +174,9 @@ public class CommunityPostController {
             map.put("id", post.getId());
             map.put("title", post.getTitle());
             map.put("content", post.getContent());
-            map.put("images", post.getImages());
-            map.put("tags", post.getTags());
+            // 将images和tags从JSON字符串转换为数组
+            map.put("images", parseJsonStringToList(post.getImages()));
+            map.put("tags", parseJsonStringToList(post.getTags()));
             map.put("channel", post.getChannel());
             map.put("visibility", post.getVisibility());
             map.put("likesCount", post.getLikesCount());
@@ -152,7 +220,37 @@ public class CommunityPostController {
             // 浏览数+1
             post.setViewsCount(post.getViewsCount() + 1);
             communityPostRepository.save(post);
-            return ResponseEntity.ok(post);
+            
+            // 构建返回数据，统一格式
+            Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", post.getId());
+            map.put("title", post.getTitle());
+            map.put("content", post.getContent());
+            // 将images和tags从JSON字符串转换为数组
+            map.put("images", parseJsonStringToList(post.getImages()));
+            map.put("tags", parseJsonStringToList(post.getTags()));
+            map.put("channel", post.getChannel());
+            map.put("visibility", post.getVisibility());
+            map.put("likesCount", post.getLikesCount());
+            map.put("commentsCount", post.getCommentsCount());
+            map.put("viewsCount", post.getViewsCount());
+            map.put("createdAt", post.getCreatedAt());
+            map.put("updatedAt", post.getUpdatedAt());
+            if (post.getAuthor() != null) {
+                Map<String, Object> author = new java.util.HashMap<>();
+                author.put("id", post.getAuthor().getId());
+                author.put("username", post.getAuthor().getUsername());
+                author.put("avatar", post.getAuthor().getAvatar());
+                map.put("author", author);
+            }
+            if (post.getProject() != null) {
+                Map<String, Object> project = new java.util.HashMap<>();
+                project.put("id", post.getProject().getId());
+                project.put("name", post.getProject().getName());
+                map.put("project", project);
+            }
+            
+            return ResponseUtil.success(map);
         } else {
             return ResponseUtil.error("帖子不存在", 404);
         }
