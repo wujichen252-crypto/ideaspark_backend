@@ -12,9 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 社区圈子控制器
@@ -34,10 +36,72 @@ public class CommunityGroupController {
     private UserRepository userRepository;
 
     /**
+     * 将CommunityGroup转换为Map，避免Hibernate懒加载问题
+     */
+    private Map<String, Object> convertGroupToMap(CommunityGroup group) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", group.getId());
+        map.put("name", group.getName());
+        map.put("keyword", group.getKeyword());
+        map.put("description", group.getDescription());
+        map.put("iconUrl", group.getIconUrl());
+        map.put("coverUrl", group.getCoverUrl());
+        map.put("createdAt", group.getCreatedAt());
+        map.put("updatedAt", group.getUpdatedAt());
+
+        // 手动转换createdBy，避免懒加载问题
+        if (group.getCreatedBy() != null) {
+            Map<String, Object> creator = new HashMap<>();
+            creator.put("id", group.getCreatedBy().getId());
+            creator.put("username", group.getCreatedBy().getUsername());
+            creator.put("avatar", group.getCreatedBy().getAvatar());
+            map.put("createdBy", creator);
+        }
+
+        // 添加成员数量
+        long memberCount = groupMemberRepository.countByGroupId(group.getId());
+        map.put("memberCount", memberCount);
+
+        return map;
+    }
+
+    /**
+     * 将CommunityGroupMember转换为Map，避免Hibernate懒加载问题
+     */
+    private Map<String, Object> convertMemberToMap(CommunityGroupMember member) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", member.getId());
+        map.put("role", member.getRole());
+        map.put("joinedAt", member.getJoinedAt());
+
+        // 转换用户信息
+        if (member.getUser() != null) {
+            Map<String, Object> user = new HashMap<>();
+            user.put("id", member.getUser().getId());
+            user.put("username", member.getUser().getUsername());
+            user.put("avatar", member.getUser().getAvatar());
+            map.put("user", user);
+        }
+
+        // 转换圈子信息
+        if (member.getGroup() != null) {
+            Map<String, Object> group = new HashMap<>();
+            group.put("id", member.getGroup().getId());
+            group.put("name", member.getGroup().getName());
+            group.put("iconUrl", member.getGroup().getIconUrl());
+            group.put("keyword", member.getGroup().getKeyword());
+            group.put("description", member.getGroup().getDescription());
+            map.put("group", group);
+        }
+
+        return map;
+    }
+
+    /**
      * 创建圈子
      */
     @PostMapping
-    public ResponseEntity<?> createGroup(@RequestBody Map<String, Object> groupData, 
+    public ResponseEntity<?> createGroup(@RequestBody Map<String, Object> groupData,
                                          HttpServletRequest request) {
         try {
             Long currentUserId = (Long) request.getAttribute("userId");
@@ -77,7 +141,7 @@ public class CommunityGroupController {
             member.setRole("admin");
             groupMemberRepository.save(member);
 
-            return ResponseUtil.created(savedGroup);
+            return ResponseUtil.created(convertGroupToMap(savedGroup));
         } catch (Exception e) {
             return ResponseUtil.error("创建圈子失败：" + e.getMessage(), 500);
         }
@@ -87,8 +151,12 @@ public class CommunityGroupController {
      * 查询所有圈子
      */
     @GetMapping
-    public ResponseEntity<List<CommunityGroup>> getAllGroups() {
-        return ResponseEntity.ok(groupRepository.findAll());
+    public ResponseEntity<?> getAllGroups() {
+        List<CommunityGroup> groups = groupRepository.findAll();
+        List<Map<String, Object>> result = groups.stream()
+                .map(this::convertGroupToMap)
+                .collect(Collectors.toList());
+        return ResponseUtil.success(result);
     }
 
     /**
@@ -100,14 +168,14 @@ public class CommunityGroupController {
         if (group.isEmpty()) {
             return ResponseUtil.error("圈子不存在", 404);
         }
-        return ResponseEntity.ok(group.get());
+        return ResponseUtil.success(convertGroupToMap(group.get()));
     }
 
     /**
      * 更新圈子信息
      */
     @PutMapping("/{groupId}")
-    public ResponseEntity<?> updateGroup(@PathVariable String groupId, 
+    public ResponseEntity<?> updateGroup(@PathVariable String groupId,
                                          @RequestBody Map<String, Object> groupData,
                                          HttpServletRequest request) {
         Long currentUserId = (Long) request.getAttribute("userId");
@@ -147,7 +215,8 @@ public class CommunityGroupController {
             group.setCoverUrl((String) groupData.get("coverUrl"));
         }
 
-        return ResponseEntity.ok(groupRepository.save(group));
+        CommunityGroup updatedGroup = groupRepository.save(group);
+        return ResponseUtil.success(convertGroupToMap(updatedGroup));
     }
 
     /**
@@ -240,7 +309,10 @@ public class CommunityGroupController {
     @GetMapping("/{groupId}/members")
     public ResponseEntity<?> getGroupMembers(@PathVariable String groupId) {
         List<CommunityGroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        return ResponseEntity.ok(members);
+        List<Map<String, Object>> result = members.stream()
+                .map(this::convertMemberToMap)
+                .collect(Collectors.toList());
+        return ResponseUtil.success(result);
     }
 
     /**
@@ -254,7 +326,10 @@ public class CommunityGroupController {
         }
 
         List<CommunityGroupMember> members = groupMemberRepository.findByUserId(currentUserId);
-        return ResponseEntity.ok(members);
+        List<Map<String, Object>> result = members.stream()
+                .map(this::convertMemberToMap)
+                .collect(Collectors.toList());
+        return ResponseUtil.success(result);
     }
 
     /**
@@ -263,7 +338,7 @@ public class CommunityGroupController {
     @GetMapping("/{groupId}/members/count")
     public ResponseEntity<?> getGroupMemberCount(@PathVariable String groupId) {
         long count = groupMemberRepository.countByGroupId(groupId);
-        return ResponseEntity.ok(java.util.Map.of("count", count));
+        return ResponseUtil.success(Map.of("count", count));
     }
 
     /**
@@ -273,10 +348,10 @@ public class CommunityGroupController {
     public ResponseEntity<?> checkMembership(@PathVariable String groupId, HttpServletRequest request) {
         Long currentUserId = (Long) request.getAttribute("userId");
         if (currentUserId == null) {
-            return ResponseEntity.ok(java.util.Map.of("member", false));
+            return ResponseUtil.success(Map.of("member", false));
         }
 
         boolean member = groupMemberRepository.existsByGroupIdAndUserId(groupId, currentUserId);
-        return ResponseEntity.ok(java.util.Map.of("member", member));
+        return ResponseUtil.success(Map.of("member", member));
     }
 }

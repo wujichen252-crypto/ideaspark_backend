@@ -12,9 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 社区评论控制器
@@ -34,10 +36,51 @@ public class CommunityCommentController {
     private UserRepository userRepository;
 
     /**
+     * 将CommunityComment转换为Map，避免Hibernate懒加载问题
+     */
+    private Map<String, Object> convertCommentToMap(CommunityComment comment) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", comment.getId());
+        map.put("content", comment.getContent());
+        map.put("likesCount", comment.getLikesCount());
+        map.put("createdAt", comment.getCreatedAt());
+        map.put("updatedAt", comment.getUpdatedAt());
+
+        // 转换用户信息
+        if (comment.getUser() != null) {
+            Map<String, Object> user = new HashMap<>();
+            user.put("id", comment.getUser().getId());
+            user.put("username", comment.getUser().getUsername());
+            user.put("avatar", comment.getUser().getAvatar());
+            map.put("user", user);
+            map.put("userId", comment.getUser().getId());
+            map.put("username", comment.getUser().getUsername());
+            map.put("avatar", comment.getUser().getAvatar());
+        }
+
+        // 转换帖子信息
+        if (comment.getPost() != null) {
+            Map<String, Object> post = new HashMap<>();
+            post.put("id", comment.getPost().getId());
+            post.put("title", comment.getPost().getTitle());
+            map.put("post", post);
+        }
+
+        // 转换父评论信息
+        if (comment.getParent() != null) {
+            map.put("parentId", comment.getParent().getId());
+        } else {
+            map.put("parentId", null);
+        }
+
+        return map;
+    }
+
+    /**
      * 新增评论
      */
     @PostMapping
-    public ResponseEntity<?> createComment(@RequestBody Map<String, Object> commentData, 
+    public ResponseEntity<?> createComment(@RequestBody Map<String, Object> commentData,
                                            HttpServletRequest request) {
         try {
             Long userId = (Long) request.getAttribute("userId");
@@ -84,7 +127,7 @@ public class CommunityCommentController {
             post.setCommentsCount(post.getCommentsCount() + 1);
             communityPostRepository.save(post);
 
-            return ResponseUtil.created(savedComment);
+            return ResponseUtil.created(convertCommentToMap(savedComment));
         } catch (Exception e) {
             return ResponseUtil.error("发布评论失败：" + e.getMessage(), 500);
         }
@@ -97,7 +140,10 @@ public class CommunityCommentController {
     public ResponseEntity<?> getCommentsByPostId(@PathVariable String postId) {
         try {
             List<CommunityComment> comments = communityCommentRepository.findByPostIdAndParentIdIsNull(postId);
-            return ResponseEntity.ok(comments);
+            List<Map<String, Object>> result = comments.stream()
+                    .map(this::convertCommentToMap)
+                    .collect(Collectors.toList());
+            return ResponseUtil.success(result);
         } catch (Exception e) {
             return ResponseUtil.error("查询评论失败：" + e.getMessage(), 500);
         }
@@ -110,7 +156,10 @@ public class CommunityCommentController {
     public ResponseEntity<?> getRepliesByParentId(@PathVariable String parentId) {
         try {
             List<CommunityComment> replies = communityCommentRepository.findByParentId(parentId);
-            return ResponseEntity.ok(replies);
+            List<Map<String, Object>> result = replies.stream()
+                    .map(this::convertCommentToMap)
+                    .collect(Collectors.toList());
+            return ResponseUtil.success(result);
         } catch (Exception e) {
             return ResponseUtil.error("查询回复失败：" + e.getMessage(), 500);
         }
@@ -123,7 +172,10 @@ public class CommunityCommentController {
     public ResponseEntity<?> getAllCommentsByPostId(@PathVariable String postId) {
         try {
             List<CommunityComment> comments = communityCommentRepository.findByPostId(postId);
-            return ResponseEntity.ok(comments);
+            List<Map<String, Object>> result = comments.stream()
+                    .map(this::convertCommentToMap)
+                    .collect(Collectors.toList());
+            return ResponseUtil.success(result);
         } catch (Exception e) {
             return ResponseUtil.error("查询评论失败：" + e.getMessage(), 500);
         }
@@ -133,7 +185,7 @@ public class CommunityCommentController {
      * 修改评论
      */
     @PutMapping("/{commentId}")
-    public ResponseEntity<?> updateComment(@PathVariable String commentId, 
+    public ResponseEntity<?> updateComment(@PathVariable String commentId,
                                            @RequestBody Map<String, Object> updateData,
                                            HttpServletRequest request) {
         try {
@@ -156,7 +208,8 @@ public class CommunityCommentController {
             String content = (String) updateData.get("content");
             if (content != null && !content.trim().isEmpty()) {
                 comment.setContent(content);
-                return ResponseEntity.ok(communityCommentRepository.save(comment));
+                CommunityComment updatedComment = communityCommentRepository.save(comment);
+                return ResponseUtil.success(convertCommentToMap(updatedComment));
             } else {
                 return ResponseUtil.error("修改的评论内容不能为空", 400);
             }
@@ -208,7 +261,7 @@ public class CommunityCommentController {
      * 更新评论点赞数
      */
     @PutMapping("/{commentId}/likes")
-    public ResponseEntity<?> updateCommentLikes(@PathVariable String commentId, 
+    public ResponseEntity<?> updateCommentLikes(@PathVariable String commentId,
                                                 @RequestParam Integer count) {
         try {
             if (count == null || count < 0) {
@@ -218,7 +271,8 @@ public class CommunityCommentController {
             if (commentOpt.isPresent()) {
                 CommunityComment comment = commentOpt.get();
                 comment.setLikesCount(count);
-                return ResponseEntity.ok(communityCommentRepository.save(comment));
+                CommunityComment updatedComment = communityCommentRepository.save(comment);
+                return ResponseUtil.success(convertCommentToMap(updatedComment));
             }
             return ResponseUtil.error("评论不存在", 404);
         } catch (Exception e) {

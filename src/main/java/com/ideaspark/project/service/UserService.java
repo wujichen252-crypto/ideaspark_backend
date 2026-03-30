@@ -1,7 +1,6 @@
 package com.ideaspark.project.service;
 
 import com.ideaspark.project.exception.BusinessException;
-import com.ideaspark.project.model.dto.request.UserRegisterRequest;
 import com.ideaspark.project.model.dto.request.UserDeleteRequest;
 import com.ideaspark.project.model.dto.request.UserLoginRequest;
 import com.ideaspark.project.model.dto.request.UserQueryRequest;
@@ -16,6 +15,7 @@ import com.ideaspark.project.repository.TeamMemberRepository;
 import com.ideaspark.project.repository.TeamRepository;
 import com.ideaspark.project.repository.UserRepository;
 import com.ideaspark.project.util.JwtUtil;
+import com.ideaspark.project.util.PasswordEncoder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,45 +23,38 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-
+/**
+ * 用户管理业务逻辑层
+ * @description 提供用户注册、登录、信息管理等核心业务逻辑
+ * @author IdeaSpark
+ */
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
-
     private final TeamRepository teamRepository;
-
     private final TeamMemberRepository teamMemberRepository;
-
     private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * 用户登录
+     * @param request 登录请求参数
+     * @return 登录响应，包含 Token 和用户信息
+     * @throws BusinessException 当邮箱或密码错误时抛出
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public LoginResponse login(UserLoginRequest request) {
-        if (request == null) {
-            throw new BusinessException("请求参数不能为空");
-        }
-        if (isBlank(request.getEmail())) {
-            throw new BusinessException("邮箱不能为空");
-        }
-        if (isBlank(request.getPassword())) {
-            throw new BusinessException("密码不能为空");
-        }
+        validateLoginRequest(request);
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessException("邮箱或密码错误"));
 
-        if (!user.getPasswordHash().equals(sha256Hex(request.getPassword()))) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new BusinessException("邮箱或密码错误");
         }
 
-        // Generate token using User ID as account/subject
         String token = jwtUtil.generateToken(String.valueOf(user.getId()), user.getRole());
 
         LoginResponse response = new LoginResponse();
@@ -72,60 +65,37 @@ public class UserService {
 
     /**
      * 注册用户
+     * @param request 注册请求参数
+     * @return 用户响应信息
+     * @throws BusinessException 当参数错误或邮箱已存在时抛出
      */
     @Transactional
     public UserResponse register(UserRegisterRequest request) {
-        if (request == null) {
-            throw new BusinessException("请求参数不能为空");
-        }
-        if (isBlank(request.getUsername())) {
-            throw new BusinessException("用户名不能为空");
-        }
-        if (isBlank(request.getEmail())) {
-            throw new BusinessException("邮箱不能为空");
-        }
-        if (isBlank(request.getPassword())) {
-            throw new BusinessException("密码不能为空");
-        }
+        validateRegisterRequest(request);
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BusinessException("邮箱已存在");
         }
 
-        User user = new User();
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setPasswordHash(sha256Hex(request.getPassword()));
-        user.setRole("USER");
-
+        User user = createUserFromRequest(request);
         User saved = userRepository.save(user);
-        Team team = new Team();
-        team.setOwner(saved);
-        team.setName(saved.getUsername());
-        team.setIsPersonal(true);
-        team.setTeamSize(1);
-        Team savedTeam = teamRepository.save(team);
-        TeamMember ownerMember = new TeamMember();
-        ownerMember.setTeam(savedTeam);
-        ownerMember.setUser(saved);
-        ownerMember.setRole("owner");
-        teamMemberRepository.save(ownerMember);
+
+        createPersonalTeam(saved);
+
         return toUserResponse(saved);
     }
 
     /**
      * 分页查询用户
+     * @param request 查询请求参数
+     * @return 用户分页列表
      */
     @Transactional(readOnly = true)
     public Page<UserResponse> queryUsers(UserQueryRequest request) {
         int page = request != null && request.getPage() != null ? request.getPage() : 0;
         int size = request != null && request.getSize() != null ? request.getSize() : 10;
 
-        if (page < 0) {
-            throw new BusinessException("page 不能小于 0");
-        }
-        if (size <= 0 || size > 200) {
-            throw new BusinessException("size 必须在 1~200 之间");
-        }
+        validatePageParams(page, size);
 
         Pageable pageable = PageRequest.of(page, size);
         Page<User> result;
@@ -140,6 +110,8 @@ public class UserService {
 
     /**
      * 删除用户
+     * @param request 删除请求参数
+     * @throws BusinessException 当用户不存在时抛出
      */
     @Transactional
     public void deleteUsers(UserDeleteRequest request) {
@@ -160,6 +132,10 @@ public class UserService {
 
     /**
      * 更新用户信息
+     * @param userId 用户 ID
+     * @param request 更新请求参数
+     * @return 更新后的用户信息
+     * @throws BusinessException 当用户不存在或邮箱已存在时抛出
      */
     @Transactional
     public UserResponse updateUser(Long userId, UserUpdateRequest request) {
@@ -170,6 +146,96 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException("用户不存在: " + userId));
 
+        updateUserFields(user, request);
+
+        User saved = userRepository.save(user);
+        return toUserResponse(saved);
+    }
+
+    // ============ 私有方法 ============
+
+    /**
+     * 验证登录请求参数
+     */
+    private void validateLoginRequest(UserLoginRequest request) {
+        if (request == null) {
+            throw new BusinessException("请求参数不能为空");
+        }
+        if (isBlank(request.getEmail())) {
+            throw new BusinessException("邮箱不能为空");
+        }
+        if (isBlank(request.getPassword())) {
+            throw new BusinessException("密码不能为空");
+        }
+    }
+
+    /**
+     * 验证注册请求参数
+     */
+    private void validateRegisterRequest(UserRegisterRequest request) {
+        if (request == null) {
+            throw new BusinessException("请求参数不能为空");
+        }
+        if (isBlank(request.getUsername())) {
+            throw new BusinessException("用户名不能为空");
+        }
+        if (isBlank(request.getEmail())) {
+            throw new BusinessException("邮箱不能为空");
+        }
+        if (isBlank(request.getPassword())) {
+            throw new BusinessException("密码不能为空");
+        }
+        if (request.getPassword().length() < 6) {
+            throw new BusinessException("密码长度不能少于 6 位");
+        }
+    }
+
+    /**
+     * 验证分页参数
+     */
+    private void validatePageParams(int page, int size) {
+        if (page < 0) {
+            throw new BusinessException("page 不能小于 0");
+        }
+        if (size <= 0 || size > 200) {
+            throw new BusinessException("size 必须在 1~200 之间");
+        }
+    }
+
+    /**
+     * 根据注册请求创建用户实体
+     */
+    private User createUserFromRequest(UserRegisterRequest request) {
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setRole("USER");
+        return user;
+    }
+
+    /**
+     * 创建个人团队
+     */
+    private void createPersonalTeam(User user) {
+        Team team = new Team();
+        team.setOwner(user);
+        team.setName(user.getUsername());
+        team.setIsPersonal(true);
+        team.setTeamSize(1);
+        Team savedTeam = teamRepository.save(team);
+
+        TeamMember ownerMember = new TeamMember();
+        ownerMember.setTeam(savedTeam);
+        ownerMember.setUser(user);
+        ownerMember.setRole("owner");
+        teamMemberRepository.save(ownerMember);
+    }
+
+    /**
+     * 更新用户字段
+     */
+    private void updateUserFields(User user, UserUpdateRequest request) {
         if (request.getAvatar() != null) {
             user.setAvatar(request.getAvatar());
         }
@@ -185,7 +251,10 @@ public class UserService {
             }
         }
         if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
-            user.setPasswordHash(sha256Hex(request.getPassword()));
+            if (request.getPassword().length() < 6) {
+                throw new BusinessException("密码长度不能少于 6 位");
+            }
+            user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         }
         if (request.getPosition() != null) {
             user.setPosition(request.getPosition());
@@ -214,14 +283,11 @@ public class UserService {
         if (request.getIsNotifPost() != null) {
             user.setIsNotifPost(request.getIsNotifPost());
         }
-
-        User saved = userRepository.save(user);
-        return toUserResponse(saved);
     }
-
 
     /**
      * Entity 转 Response DTO（手动映射）
+     * TODO: 后续使用 MapStruct 自动生成
      */
     private UserResponse toUserResponse(User user) {
         UserResponse dto = new UserResponse();
@@ -263,22 +329,4 @@ public class UserService {
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }
-
-    /**
-     * 使用 SHA-256 对明文进行不可逆摘要
-     */
-    private String sha256Hex(String plainText) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = digest.digest(plainText.getBytes(StandardCharsets.UTF_8));
-            StringBuilder sb = new StringBuilder(bytes.length * 2);
-            for (byte b : bytes) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (NoSuchAlgorithmException e) {
-            throw new BusinessException("密码处理失败");
-        }
-    }
 }
-

@@ -1,70 +1,118 @@
 server:
-  port: 8081
+  port: ${SERVER_PORT:8081}
 
 spring:
   application:
     name: ideaspark
   flyway:
-    enabled: false
+    enabled: ${FLYWAY_ENABLED:true}
     clean-disabled: true
-    validate-on-migrate: false
+    validate-on-migrate: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
   datasource:
-    url: ${DB_URL:jdbc:mysql://62.234.128.72:3306/ideaspark?useSSL=false&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8}
-    username: ${DB_USERNAME:ideaspark}
-    password: ${DB_PASSWORD:icG62wSHYaaPKGX6}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
-      connection-timeout: 30000
+      pool-name: IdeaSparkHikariPool
+      maximum-pool-size: ${DB_MAX_POOL_SIZE:20}
+      minimum-idle: ${DB_MIN_IDLE:5}
+      connection-timeout: ${DB_CONN_TIMEOUT:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT:600000}
+      max-lifetime: ${DB_MAX_LIFETIME:1800000}
+      connection-test-query: SELECT 1
+      validation-timeout: ${DB_VALIDATION_TIMEOUT:5000}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
+    show-sql: ${JPA_SHOW_SQL:false}
     properties:
       hibernate:
-        '[format_sql]': true
+        '[format_sql]': ${JPA_FORMAT_SQL:true}
         jdbc:
           '[time_zone]': Asia/Shanghai
+        dialect: org.hibernate.dialect.MySQLDialect
 
   jackson:
     time-zone: Asia/Shanghai
     serialization:
       write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
 
 logging:
   level:
     root: INFO
-    org.springdoc: DEBUG
-    org.springframework.web: DEBUG
+    com.ideaspark: ${LOG_LEVEL:DEBUG}
+    org.springframework.web: INFO
+    org.hibernate.SQL: ${HIBERNATE_LOG_SQL:DEBUG}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${HIBERNATE_LOG_BIND:TRACE}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_FILE_PATH:logs/ideaspark.log}
+    max-size: ${LOG_FILE_MAX_SIZE:100MB}
+    max-history: ${LOG_FILE_MAX_HISTORY:30}
 
 springdoc:
   api-docs:
     enabled: true
     path: /v3/api-docs
   swagger-ui:
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:true}
     path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics,prometheus
+      base-path: /actuator
   endpoint:
     health:
       show-details: when_authorized
+      probes:
+        enabled: true
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    export:
+      prometheus:
+        enabled: true
 
 jwt:
   secret: ${JWT_SECRET}
-  expire-seconds: 604800
-  issuer: ideaspark
+  expire-seconds: ${JWT_EXPIRE_SECONDS:604800}
+  issuer: ${JWT_ISSUER:ideaspark}
 
 oss:
-  enabled: true
-  endpoint: https://oss-cn-beijing.aliyuncs.com
+  enabled: ${OSS_ENABLED:true}
+  endpoint: ${OSS_ENDPOINT:https://oss-cn-beijing.aliyuncs.com}
   access-key-id: ${OSS_ACCESS_KEY_ID}
   access-key-secret: ${OSS_ACCESS_KEY_SECRET}
-  bucket: ideaspark
-  base-dir: uploads
+  bucket: ${OSS_BUCKET:ideaspark}
+  base-dir: ${OSS_BASE_DIR:uploads}
 
+# 应用配置
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    capacity: ${RATE_LIMIT_CAPACITY:100}
+    refill-tokens: ${RATE_LIMIT_REFILL:10}
+    refill-period: ${RATE_LIMIT_PERIOD:1}
