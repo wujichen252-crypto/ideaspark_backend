@@ -1,14 +1,9 @@
 package com.ideaspark.project.config;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Web 配置类
@@ -21,21 +16,6 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final JwtAuthenticationInterceptor jwtAuthenticationInterceptor;
     private final RateLimitInterceptor rateLimitInterceptor;
-
-    @Value("${app.cors.allowed-origins:http://localhost:5173}")
-    private String allowedOrigins;
-
-    @Value("${app.cors.allowed-methods:GET,POST,PUT,DELETE,OPTIONS}")
-    private String allowedMethods;
-
-    @Value("${app.cors.allowed-headers:*}")
-    private String allowedHeaders;
-
-    @Value("${app.cors.allow-credentials:true}")
-    private boolean allowCredentials;
-
-    @Value("${app.cors.max-age:3600}")
-    private long maxAge;
 
     /**
      * 配置拦截器
@@ -62,6 +42,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/user/login",
                         "/api/user/register",
                         "/api/public/**",
+                        "/api/admin/init/**",
                         "/api/market/projects/list",
                         "/api/market/projects/*",
                         "/api/community/groups",
@@ -83,18 +64,7 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     /**
-     * 配置跨域访问
+     * 注意：CORS 配置已移至 CorsConfig 类
+     * 使用 CorsFilter 过滤器处理跨域，优先级更高，确保在 Spring Security 之前执行
      */
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        List<String> origins = Arrays.asList(allowedOrigins.split(","));
-        List<String> methods = Arrays.asList(allowedMethods.split(","));
-
-        registry.addMapping("/**")
-                .allowedOrigins(origins.toArray(new String[0]))
-                .allowedMethods(methods.toArray(new String[0]))
-                .allowedHeaders(allowedHeaders)
-                .allowCredentials(allowCredentials)
-                .maxAge(maxAge);
-    }
 }

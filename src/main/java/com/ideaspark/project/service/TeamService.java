@@ -16,6 +16,7 @@ import com.ideaspark.project.model.dto.response.TeamInvitationItemResponse;
 import com.ideaspark.project.model.dto.response.TeamInvitationSendResponse;
 import com.ideaspark.project.model.dto.response.TeamListItemResponse;
 import com.ideaspark.project.model.dto.response.TeamMemberListItemResponse;
+import com.ideaspark.project.model.dto.response.TeamProjectResponse;
 import com.ideaspark.project.model.dto.response.TeamMemberRoleUpdateResponse;
 import com.ideaspark.project.model.dto.response.TeamMemberRemoveResponse;
 import com.ideaspark.project.model.dto.response.TeamExitResponse;
@@ -239,8 +240,9 @@ public class TeamService {
         if (teamUuid == null || teamUuid.trim().isEmpty()) {
             throw new BusinessException("团队UUID不能为空");
         }
-        Team team = teamRepository.findById(teamUuid)
-                .orElseThrow(() -> new BusinessException("团队不存在"));
+        if (!teamRepository.existsById(teamUuid)) {
+            throw new BusinessException("团队不存在");
+        }
         Optional<TeamMember> membershipOpt = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, userId);
         TeamMember membership = membershipOpt.orElseThrow(() -> new BusinessException("无权访问该团队"));
         String currentRole = membership.getRole();
@@ -288,8 +290,9 @@ public class TeamService {
         if (request == null || request.getRole() == null || request.getRole().trim().isEmpty()) {
             throw new BusinessException("角色不能为空");
         }
-        Team team = teamRepository.findById(teamUuid)
-                .orElseThrow(() -> new BusinessException("团队不存在"));
+        if (!teamRepository.existsById(teamUuid)) {
+            throw new BusinessException("团队不存在");
+        }
         Optional<TeamMember> membershipOpt = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, userId);
         TeamMember currentMembership = membershipOpt.orElseThrow(() -> new BusinessException("无权访问该团队"));
         TeamMember targetMember = teamMemberRepository.findById(Long.valueOf(memberId))
@@ -345,6 +348,12 @@ public class TeamService {
         if (targetMember.getTeam() == null || !teamUuid.equals(targetMember.getTeam().getUuid())) {
             throw new BusinessException("成员不属于当前团队");
         }
+
+        // 创建者不能被移除
+        if (team.getOwner() != null && targetMember.getUser() != null && team.getOwner().getId().equals(targetMember.getUser().getId())) {
+            throw new BusinessException("不能移除团队所有者");
+        }
+
         String currentRole = currentMembership.getRole();
         if (!canRemoveMember(currentRole, targetMember, userId)) {
             throw new BusinessException("无权限移除该成员");
@@ -574,6 +583,7 @@ public class TeamService {
             throw new BusinessException("团队数据异常");
         }
         TeamListItemResponse dto = new TeamListItemResponse();
+        dto.setUuid(team.getUuid());
         dto.setName(team.getName());
         dto.setAvatarUrl(team.getAvatarUrl());
         return dto;
@@ -751,6 +761,68 @@ public class TeamService {
         data.put("invitation", invitationInfo);
         data.put("joined", joined);
         return data;
+    }
+
+    /**
+     * 获取团队项目列表
+     */
+    @Transactional(readOnly = true)
+    public Page<TeamProjectResponse> getTeamProjects(String teamUuid, Long userId, int page, int size) {
+        if (userId == null) {
+            throw new BusinessException("用户未登录");
+        }
+        if (teamUuid == null || teamUuid.trim().isEmpty()) {
+            throw new BusinessException("团队UUID不能为空");
+        }
+        Team team = teamRepository.findById(teamUuid)
+                .orElseThrow(() -> new BusinessException("团队不存在"));
+        
+        // 检查用户是否是团队成员
+        Optional<TeamMember> membershipOpt = teamMemberRepository.findByTeam_UuidAndUser_Id(teamUuid, userId);
+        if (membershipOpt.isEmpty() && !userId.equals(team.getOwner().getId())) {
+            throw new BusinessException("无权访问该团队");
+        }
+        
+        if (page < 1) {
+            page = 1;
+        }
+        if (size <= 0 || size > 200) {
+            size = 20;
+        }
+        
+        Pageable pageable = PageRequest.of(page - 1, size);
+        Page<Project> projectPage = projectRepository.findByTeam_Uuid(teamUuid, pageable);
+        
+        List<TeamProjectResponse> items = projectPage.getContent().stream()
+                .map(this::toTeamProjectResponse)
+                .collect(Collectors.toList());
+        
+        return new PageImpl<>(items, pageable, projectPage.getTotalElements());
+    }
+    
+    /**
+     * 转换项目为响应DTO
+     */
+    private TeamProjectResponse toTeamProjectResponse(Project project) {
+        TeamProjectResponse dto = new TeamProjectResponse();
+        dto.setId(project.getId());
+        dto.setName(project.getName());
+        dto.setDescription(project.getDescription());
+        dto.setCategory(project.getCategory());
+        dto.setCoverUrl(project.getCoverUrl());
+        dto.setStatus(project.getStatus());
+        dto.setVisibility(project.getVisibility());
+        dto.setProgress(project.getProgress());
+        dto.setCreatedAt(project.getCreatedAt());
+        dto.setUpdatedAt(project.getUpdatedAt());
+        
+        if (project.getOwner() != null) {
+            dto.setOwnerId(project.getOwner().getId());
+            dto.setOwnerName(project.getOwner().getUsername());
+            dto.setOwnerAvatar(project.getOwner().getAvatar());
+        }
+        
+        return dto;
     }
 
     private String generateInvitationToken() {

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
@@ -18,10 +19,11 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<?> handleBusinessException(BusinessException ex) {
-        return ResponseEntity.badRequest().body(Map.of(
-                "status", ex.getCode(),
-                "message", ex.getMessage()
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", ex.getCode());
+        response.put("message", ex.getMessage());
+        response.put("data", null);
+        return ResponseEntity.badRequest().body(response);
     }
 
     /**
@@ -29,10 +31,10 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<?> handleNoResourceFoundException(NoResourceFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
-                "status", 404,
-                "message", "请求的资源不存在: " + ex.getResourcePath()
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", 404);
+        response.put("message", "请求的资源不存在: " + ex.getResourcePath());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
     /**
@@ -40,10 +42,10 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<?> handleMethodNotSupportedException(HttpRequestMethodNotSupportedException ex) {
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(Map.of(
-                "status", 405,
-                "message", "不支持当前请求方法: " + ex.getMethod()
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", 405);
+        response.put("message", "不支持当前请求方法: " + ex.getMethod());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
     }
 
     /**
@@ -51,10 +53,10 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleOtherExceptions(Exception ex) {
-        return ResponseEntity.status(500).body(Map.of(
-                "status", 500,
-                "message", "服务器内部错误: " + ex.getMessage()
-        ));
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", 500);
+        response.put("message", "服务器内部错误: " + ex.getMessage());
+        return ResponseEntity.status(500).body(response);
     }
 }
 

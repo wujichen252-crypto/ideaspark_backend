@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +48,7 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, String> 
      * 取消关注（删除记录）
      */
     @Modifying
+    @Transactional
     @Query("DELETE FROM UserFollow uf WHERE uf.follower.id = :followerId AND uf.following.id = :followingId")
     void deleteByFollowerIdAndFollowingId(@Param("followerId") Long followerId, @Param("followingId") Long followingId);
 
@@ -55,4 +57,10 @@ public interface UserFollowRepository extends JpaRepository<UserFollow, String> 
      */
     @Query("SELECT CASE WHEN COUNT(uf) > 0 THEN true ELSE false END FROM UserFollow uf WHERE uf.follower.id = :followerId AND uf.following.id = :followingId")
     boolean existsByFollowerIdAndFollowingId(@Param("followerId") Long followerId, @Param("followingId") Long followingId);
+
+    /**
+     * 查询用户关注的用户ID列表
+     */
+    @Query("SELECT uf.following.id FROM UserFollow uf WHERE uf.follower.id = :followerId")
+    List<Long> findFollowingIdsByFollowerId(@Param("followerId") Long followerId);
 }

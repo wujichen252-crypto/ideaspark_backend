@@ -1,5 +1,6 @@
 package com.ideaspark.project.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -16,10 +17,11 @@ import java.util.UUID;
 @Data
 @Entity
 @Table(name = "teams")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Team {
 
     @Id
-    @Column(name = "uuiu", length = 36)
+    @Column(name = "id", length = 36)
     private String uuid;
 
     @ManyToOne
@@ -56,8 +58,7 @@ public class Team {
     @PrePersist
     public void prePersist() {
         if (this.uuid == null || this.uuid.isBlank()) {
-            int value = (int) (Math.random() * 1_000_000);
-            this.uuid = String.format("%06d", value);
+            this.uuid = UUID.randomUUID().toString();
         }
         if (this.isPersonal == null) {
             this.isPersonal = false;

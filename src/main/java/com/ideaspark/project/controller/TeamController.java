@@ -238,4 +238,40 @@ public class TeamController {
                 "data", result
         ));
     }
+
+    @GetMapping("/{uuid}/projects")
+    @Operation(summary = "获取团队项目列表", description = "获取指定团队的所有项目列表")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "400", description = "参数错误"),
+        @ApiResponse(responseCode = "401", description = "未登录"),
+        @ApiResponse(responseCode = "403", description = "无权限访问"),
+        @ApiResponse(responseCode = "404", description = "团队不存在")
+    })
+    public ResponseEntity<?> getTeamProjects(
+            @Parameter(description = "团队UUID", required = true)
+            @PathVariable("uuid") String teamUuid,
+            @Parameter(description = "用户ID（从token中获取）", hidden = true)
+            @RequestAttribute("userId") Long userId,
+            @Parameter(description = "页码，默认1")
+            @ModelAttribute TeamMyListRequest request) {
+        int page = request != null && request.getPage() != null && request.getPage() >= 1
+                ? request.getPage()
+                : 1;
+        int size = request != null && request.getSize() != null && request.getSize() > 0
+                ? request.getSize()
+                : 20;
+        var pageResult = teamService.getTeamProjects(teamUuid, userId, page, size);
+        Map<String, Object> data = Map.of(
+                "projects", pageResult.getContent(),
+                "total", pageResult.getTotalElements(),
+                "page", page,
+                "size", pageResult.getSize()
+        );
+        return ResponseEntity.ok(Map.of(
+                "status", 200,
+                "message", "获取成功",
+                "data", data
+        ));
+    }
 }

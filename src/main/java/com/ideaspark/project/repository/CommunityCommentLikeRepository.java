@@ -2,7 +2,9 @@ package com.ideaspark.project.repository;
 
 import com.ideaspark.project.model.entity.CommunityCommentLike;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -17,7 +19,10 @@ public interface CommunityCommentLikeRepository extends JpaRepository<CommunityC
     /**
      * 删除用户对评论的点赞
      */
-    void deleteByCommentIdAndUserId(String commentId, Long userId);
+    @Modifying
+    @Transactional
+    @org.springframework.data.jpa.repository.Query("DELETE FROM CommunityCommentLike ccl WHERE ccl.comment.id = :commentId AND ccl.user.id = :userId")
+    void deleteByCommentIdAndUserId(@org.springframework.data.repository.query.Param("commentId") String commentId, @org.springframework.data.repository.query.Param("userId") Long userId);
 
     /**
      * 统计评论的点赞总数

@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -282,25 +283,36 @@ public class CommunityGroupController {
      * 退出圈子
      */
     @DeleteMapping("/{groupId}/join")
+    @Transactional
     public ResponseEntity<?> leaveGroup(@PathVariable String groupId, HttpServletRequest request) {
-        Long currentUserId = (Long) request.getAttribute("userId");
-        if (currentUserId == null) {
-            return ResponseUtil.error("请先登录", 401);
-        }
+        try {
+            Long currentUserId = (Long) request.getAttribute("userId");
+            if (currentUserId == null) {
+                return ResponseUtil.error("请先登录", 401);
+            }
 
-        Optional<CommunityGroupMember> memberOpt = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId);
-        if (memberOpt.isEmpty()) {
-            return ResponseUtil.error("未加入该圈子", 400);
-        }
+            // 检查是否是创建者
+            Optional<CommunityGroup> groupOpt = groupRepository.findById(groupId);
+            if (groupOpt.isEmpty()) {
+                return ResponseUtil.error("圈子不存在", 404);
+            }
+            
+            if (groupOpt.get().getCreatedBy().getId().equals(currentUserId)) {
+                return ResponseUtil.error("圈子创建者不能退出，请先转让圈子或解散圈子", 400);
+            }
 
-        // 检查是否是创建者
-        Optional<CommunityGroup> groupOpt = groupRepository.findById(groupId);
-        if (groupOpt.isPresent() && groupOpt.get().getCreatedBy().getId().equals(currentUserId)) {
-            return ResponseUtil.error("圈子创建者不能退出，请先转让圈子或解散圈子", 400);
-        }
+            Optional<CommunityGroupMember> memberOpt = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId);
+            if (memberOpt.isEmpty()) {
+                return ResponseUtil.error("未加入该圈子", 400);
+            }
 
-        groupMemberRepository.deleteByGroupIdAndUserId(groupId, currentUserId);
-        return ResponseUtil.success("退出圈子成功");
+            // 使用 Repository 的 delete 方法直接删除实体，比自定义 deleteBy 更稳健
+            groupMemberRepository.delete(memberOpt.get());
+            return ResponseUtil.success("退出圈子成功");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseUtil.error("退出圈子操作失败：" + e.getMessage(), 500);
+        }
     }
 
     /**
@@ -353,5 +365,112 @@ public class CommunityGroupController {
 
         boolean member = groupMemberRepository.existsByGroupIdAndUserId(groupId, currentUserId);
         return ResponseUtil.success(Map.of("member", member));
+    }
+
+    /**
+     * 移除圈子成员（仅创建者和管理员可调用）
+     */
+    @DeleteMapping("/{groupId}/members/{memberId}")
+    public ResponseEntity<?> removeGroupMember(
+            @PathVariable String groupId,
+            @PathVariable String memberId,
+            HttpServletRequest request) {
+        Long currentUserId = (Long) request.getAttribute("userId");
+        if (currentUserId == null) {
+            return ResponseUtil.error("请先登录", 401);
+        }
+
+        // 检查圈子是否存在
+        Optional<CommunityGroup> groupOpt = groupRepository.findById(groupId);
+        if (groupOpt.isEmpty()) {
+            return ResponseUtil.error("圈子不存在", 404);
+        }
+        CommunityGroup group = groupOpt.get();
+
+        // 检查当前用户是否有权限（创建者或管理员）
+        Optional<CommunityGroupMember> currentMemberOpt = groupMemberRepository.findByGroupIdAndUserId(groupId, currentUserId);
+        boolean isCreator = group.getCreatedBy().getId().equals(currentUserId);
+        boolean isAdmin = currentMemberOpt.isPresent() && "admin".equals(currentMemberOpt.get().getRole());
+        
+        if (!isCreator && !isAdmin) {
+            return ResponseUtil.error("无权移除此成员", 403);
+        }
+
+        // 检查目标成员是否存在
+        Optional<CommunityGroupMember> targetMemberOpt = groupMemberRepository.findById(memberId);
+        if (targetMemberOpt.isEmpty() || !targetMemberOpt.get().getGroup().getId().equals(groupId)) {
+            return ResponseUtil.error("成员不存在", 404);
+        }
+
+        CommunityGroupMember targetMember = targetMemberOpt.get();
+        
+        // 不能移除创建者
+        if (group.getCreatedBy().getId().equals(targetMember.getUser().getId())) {
+            return ResponseUtil.error("不能移除圈子创建者", 403);
+        }
+
+        // 管理员不能移除其他管理员（只有创建者可以）
+        if ("admin".equals(targetMember.getRole()) && !isCreator) {
+            return ResponseUtil.error("无权移除管理员", 403);
+        }
+
+        groupMemberRepository.delete(targetMember);
+        return ResponseUtil.success(Map.of("memberId", memberId, "message", "成员移除成功"));
+    }
+
+    /**
+     * 更新圈子成员角色（仅创建者可调用）
+     */
+    @PutMapping("/{groupId}/members/{memberId}/role")
+    public ResponseEntity<?> updateGroupMemberRole(
+            @PathVariable String groupId,
+            @PathVariable String memberId,
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+        Long currentUserId = (Long) request.getAttribute("userId");
+        if (currentUserId == null) {
+            return ResponseUtil.error("请先登录", 401);
+        }
+
+        // 检查圈子是否存在
+        Optional<CommunityGroup> groupOpt = groupRepository.findById(groupId);
+        if (groupOpt.isEmpty()) {
+            return ResponseUtil.error("圈子不存在", 404);
+        }
+        CommunityGroup group = groupOpt.get();
+
+        // 检查当前用户是否是创建者
+        if (!group.getCreatedBy().getId().equals(currentUserId)) {
+            return ResponseUtil.error("只有圈子创建者可以修改成员角色", 403);
+        }
+
+        // 检查目标成员是否存在
+        Optional<CommunityGroupMember> targetMemberOpt = groupMemberRepository.findById(memberId);
+        if (targetMemberOpt.isEmpty() || !targetMemberOpt.get().getGroup().getId().equals(groupId)) {
+            return ResponseUtil.error("成员不存在", 404);
+        }
+
+        CommunityGroupMember targetMember = targetMemberOpt.get();
+        
+        // 不能修改创建者的角色
+        if (group.getCreatedBy().getId().equals(targetMember.getUser().getId())) {
+            return ResponseUtil.error("不能修改创建者的角色", 403);
+        }
+
+        String newRole = body.get("role");
+        if (newRole == null || (!"admin".equals(newRole) && !"member".equals(newRole))) {
+            return ResponseUtil.error("角色必须是 admin 或 member", 400);
+        }
+
+        String oldRole = targetMember.getRole();
+        targetMember.setRole(newRole);
+        groupMemberRepository.save(targetMember);
+
+        return ResponseUtil.success(Map.of(
+                "memberId", memberId,
+                "oldRole", oldRole,
+                "newRole", newRole,
+                "message", "角色更新成功"
+        ));
     }
 }

@@ -37,15 +37,19 @@ public class UserService {
     private final TeamMemberRepository teamMemberRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityLogService securityLogService;
 
     /**
      * 用户登录
      * @param request 登录请求参数
+     * @param ipAddress IP地址
+     * @param device 设备信息
+     * @param userAgent UserAgent
      * @return 登录响应，包含 Token 和用户信息
      * @throws BusinessException 当邮箱或密码错误时抛出
      */
     @Transactional(readOnly = true)
-    public LoginResponse login(UserLoginRequest request) {
+    public LoginResponse login(UserLoginRequest request, String ipAddress, String device, String userAgent) {
         validateLoginRequest(request);
 
         User user = userRepository.findByEmail(request.getEmail())
@@ -56,6 +60,9 @@ public class UserService {
         }
 
         String token = jwtUtil.generateToken(String.valueOf(user.getId()), user.getRole());
+
+        // 记录登录成功日志
+        securityLogService.recordLoginSuccess(user.getId(), ipAddress, device, userAgent);
 
         LoginResponse response = new LoginResponse();
         response.setToken(token);
@@ -328,5 +335,37 @@ public class UserService {
      */
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    /**
+     * 获取用户统计数据
+     */
+    @Transactional(readOnly = true)
+    public com.ideaspark.project.model.dto.response.UserStatsResponse getUserStats(Long userId) {
+        if (userId == null) {
+            throw new BusinessException("用户ID不能为空");
+        }
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("用户不存在"));
+        
+        // 获取用户帖子数量
+        long postCount = user.getCommunityPosts() != null ? user.getCommunityPosts().size() : 0;
+        
+        // 获取用户项目数量
+        long projectCount = user.getOwnedProjects() != null ? user.getOwnedProjects().size() : 0;
+        
+        // 获取关注数
+        long followingCount = user.getFollowingCount() != null ? user.getFollowingCount() : 0;
+        
+        // 获取粉丝数
+        long followerCount = user.getFollowersCount() != null ? user.getFollowersCount() : 0;
+        
+        return com.ideaspark.project.model.dto.response.UserStatsResponse.builder()
+                .postCount(postCount)
+                .projectCount(projectCount)
+                .followingCount(followingCount)
+                .followerCount(followerCount)
+                .build();
     }
 }

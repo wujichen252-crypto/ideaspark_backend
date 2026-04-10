@@ -13,11 +13,10 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-@JsonIgnoreProperties({"ownedProjects", "projectMemberships", "chatSessions", "communityPosts", "comments", "hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"ownedProjects", "projectMemberships", "chatSessions", "communityPosts", "comments", "teams", "teamMemberships", "invitations", "following", "followers", "hibernateLazyInitializer", "handler"})
 public class User {
 
     @Id

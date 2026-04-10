@@ -1,6 +1,5 @@
 package com.ideaspark.project.config;
 
-import com.ideaspark.project.exception.BusinessException;
 import com.ideaspark.project.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

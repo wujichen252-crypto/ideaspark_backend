@@ -89,6 +89,8 @@ public class ProjectMarketService {
         List<ProjectMarketListItemResponse> items = new ArrayList<>();
         for (Project project : projects) {
             ProjectMarketListItemResponse item = new ProjectMarketListItemResponse();
+            String projectId = project.getId();
+            item.setProjectId(projectId);
             item.setProjectImage(project.getCoverUrl());
             item.setProjectName(project.getName());
             User owner = project.getOwner();
@@ -96,7 +98,6 @@ public class ProjectMarketService {
                 item.setOwnerName(owner.getUsername());
                 item.setOwnerAvatar(owner.getAvatar());
             }
-            String projectId = project.getId();
             item.setLikeCount(projectId != null ? likesMap.getOrDefault(projectId, 0L) : 0L);
             List<String> tagList = new ArrayList<>();
             if (projectId != null && tagsMap.containsKey(projectId)) {

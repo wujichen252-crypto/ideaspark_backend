@@ -2,7 +2,9 @@ package com.ideaspark.project.repository;
 
 import com.ideaspark.project.model.entity.CommunityGroupMember;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,5 +40,8 @@ public interface CommunityGroupMemberRepository extends JpaRepository<CommunityG
     /**
      * 删除成员记录
      */
-    void deleteByGroupIdAndUserId(String groupId, Long userId);
+    @Modifying
+    @Transactional
+    @org.springframework.data.jpa.repository.Query("DELETE FROM CommunityGroupMember cgm WHERE cgm.group.id = :groupId AND cgm.user.id = :userId")
+    void deleteByGroupIdAndUserId(@org.springframework.data.repository.query.Param("groupId") String groupId, @org.springframework.data.repository.query.Param("userId") Long userId);
 }

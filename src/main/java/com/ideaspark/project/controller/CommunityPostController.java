@@ -3,7 +3,6 @@ package com.ideaspark.project.controller;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ideaspark.project.model.entity.CommunityPost;
-import com.ideaspark.project.model.entity.Project;
 import com.ideaspark.project.model.entity.User;
 import com.ideaspark.project.repository.CommunityPostRepository;
 import com.ideaspark.project.repository.ProjectRepository;
@@ -11,12 +10,11 @@ import com.ideaspark.project.repository.UserRepository;
 import com.ideaspark.project.util.ResponseUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -161,6 +159,7 @@ public class CommunityPostController {
 
     /**
      * 查询所有帖子（公开接口，无需认证）
+     * 过滤掉已删除的帖子（visibility = 'deleted'）
      */
     @GetMapping
     @Operation(summary = "查询所有帖子", description = "获取所有公开的社区帖子列表，无需登录认证")
@@ -169,7 +168,10 @@ public class CommunityPostController {
     })
     public ResponseEntity<?> getAllPosts(HttpServletRequest request) {
         List<CommunityPost> posts = communityPostRepository.findAll();
-        List<Map<String, Object>> result = posts.stream().map(post -> {
+        List<Map<String, Object>> result = posts.stream()
+            .filter(post -> !"deleted".equals(post.getVisibility()))
+            .sorted((p1, p2) -> p2.getCreatedAt().compareTo(p1.getCreatedAt()))
+            .map(post -> {
             Map<String, Object> map = new java.util.HashMap<>();
             map.put("id", post.getId());
             map.put("title", post.getTitle());
@@ -217,6 +219,10 @@ public class CommunityPostController {
         Optional<CommunityPost> postOpt = communityPostRepository.findById(postId);
         if (postOpt.isPresent()) {
             CommunityPost post = postOpt.get();
+            // 检查帖子是否已删除
+            if ("deleted".equals(post.getVisibility())) {
+                return ResponseUtil.error("帖子不存在或已被删除", 404);
+            }
             // 浏览数+1
             post.setViewsCount(post.getViewsCount() + 1);
             communityPostRepository.save(post);
@@ -297,7 +303,36 @@ public class CommunityPostController {
         }
 
         CommunityPost updatedPost = communityPostRepository.save(post);
-        return ResponseEntity.ok(updatedPost);
+        
+        // 构建返回数据，统一格式
+        Map<String, Object> map = new java.util.HashMap<>();
+        map.put("id", updatedPost.getId());
+        map.put("title", updatedPost.getTitle());
+        map.put("content", updatedPost.getContent());
+        map.put("images", parseJsonStringToList(updatedPost.getImages()));
+        map.put("tags", parseJsonStringToList(updatedPost.getTags()));
+        map.put("channel", updatedPost.getChannel());
+        map.put("visibility", updatedPost.getVisibility());
+        map.put("likesCount", updatedPost.getLikesCount());
+        map.put("commentsCount", updatedPost.getCommentsCount());
+        map.put("viewsCount", updatedPost.getViewsCount());
+        map.put("createdAt", updatedPost.getCreatedAt());
+        map.put("updatedAt", updatedPost.getUpdatedAt());
+        if (updatedPost.getAuthor() != null) {
+            Map<String, Object> author = new java.util.HashMap<>();
+            author.put("id", updatedPost.getAuthor().getId());
+            author.put("username", updatedPost.getAuthor().getUsername());
+            author.put("avatar", updatedPost.getAuthor().getAvatar());
+            map.put("author", author);
+        }
+        if (updatedPost.getProject() != null) {
+            Map<String, Object> project = new java.util.HashMap<>();
+            project.put("id", updatedPost.getProject().getId());
+            project.put("name", updatedPost.getProject().getName());
+            map.put("project", project);
+        }
+        
+        return ResponseUtil.success(map);
     }
 
     /**
@@ -324,7 +359,7 @@ public class CommunityPostController {
         // 逻辑删除：将状态设为0
         post.setVisibility("deleted");
         communityPostRepository.save(post);
-        return ResponseUtil.success("帖子删除成功（逻辑删除）");
+        return ResponseUtil.ok("帖子删除成功（逻辑删除）", null);
     }
 
     /**
@@ -350,7 +385,12 @@ public class CommunityPostController {
         if (postOpt.isPresent()) {
             CommunityPost post = postOpt.get();
             post.setCommentsCount(count);
-            return ResponseEntity.ok(communityPostRepository.save(post));
+            CommunityPost savedPost = communityPostRepository.save(post);
+            // 统一返回格式
+            Map<String, Object> result = new java.util.HashMap<>();
+            result.put("id", savedPost.getId());
+            result.put("commentsCount", savedPost.getCommentsCount());
+            return ResponseUtil.success(result);
         }
         return ResponseUtil.error("帖子不存在", 404);
     }

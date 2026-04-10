@@ -233,6 +233,48 @@ public class UserFollowController {
     }
 
     /**
+     * 推荐关注用户
+     * 返回当前用户未关注的活跃用户列表
+     */
+    @GetMapping("/recommend")
+    public ResponseEntity<?> getRecommendUsers(HttpServletRequest request) {
+        Long currentUserId = (Long) request.getAttribute("userId");
+        if (currentUserId == null) {
+            // 未登录用户返回随机活跃用户
+            List<User> randomUsers = userRepository.findRandomUsers(5);
+            List<java.util.Map<String, Object>> result = randomUsers.stream().map(u -> {
+                java.util.Map<String, Object> map = new java.util.HashMap<>();
+                map.put("id", u.getId());
+                map.put("name", u.getUsername());
+                map.put("avatar", u.getAvatar());
+                map.put("desc", u.getBio() != null ? u.getBio() : "IdeaSpark 用户");
+                map.put("isFollowed", false);
+                return map;
+            }).collect(java.util.stream.Collectors.toList());
+            return ResponseUtil.success(result);
+        }
+
+        // 获取当前用户已关注的用户ID列表
+        List<Long> followingIds = userFollowRepository.findFollowingIdsByFollowerId(currentUserId);
+        followingIds.add(currentUserId); // 排除自己
+
+        // 获取未关注的活跃用户
+        List<User> recommendUsers = userRepository.findRecommendUsers(followingIds, 5);
+        
+        List<java.util.Map<String, Object>> result = recommendUsers.stream().map(u -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", u.getId());
+            map.put("name", u.getUsername());
+            map.put("avatar", u.getAvatar());
+            map.put("desc", u.getBio() != null ? u.getBio() : "IdeaSpark 用户");
+            map.put("isFollowed", false);
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+        
+        return ResponseUtil.success(result);
+    }
+
+    /**
      * 更新用户的关注数和粉丝数
      */
     private void updateFollowCounts(Long userId) {

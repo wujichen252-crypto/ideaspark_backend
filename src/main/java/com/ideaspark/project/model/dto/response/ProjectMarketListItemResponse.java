@@ -7,6 +7,8 @@ import java.util.List;
 @Data
 public class ProjectMarketListItemResponse {
 
+    private String projectId;
+
     private String projectImage;
 
     private String projectName;

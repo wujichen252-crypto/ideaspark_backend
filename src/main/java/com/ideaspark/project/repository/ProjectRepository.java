@@ -29,4 +29,9 @@ public interface ProjectRepository extends JpaRepository<Project, String> {
                                  @Param("keyword") String keyword,
                                  @Param("status") String status,
                                  Pageable pageable);
+
+    /**
+     * 根据团队UUID查询项目列表
+     */
+    Page<Project> findByTeam_Uuid(String teamUuid, Pageable pageable);
 }
